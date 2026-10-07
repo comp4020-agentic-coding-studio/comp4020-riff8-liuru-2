@@ -228,8 +228,8 @@ export function createAmbient(canvas) {
       }
       case "shadow": {
         const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
-        g.addColorStop(0, `rgba(4,2,8,${life * 0.45})`);
-        g.addColorStop(0.6, rgba(META.shadow.c, life * 0.05));
+        g.addColorStop(0, `rgba(4,2,8,${life * 0.4})`);
+        g.addColorStop(0.55, `rgba(28,10,30,${life * 0.16})`);
         g.addColorStop(1, "rgba(4,2,8,0)");
         ctx.fillStyle = g;
         ctx.fillRect(p.x - p.r, p.y - p.r, p.r * 2, p.r * 2);

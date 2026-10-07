@@ -225,6 +225,7 @@ export function renderWall(traces: Trace[], visitorId: string): string {
           <span>一切有為法</span><span>如夢幻泡影</span><span>如露亦如電</span><span>應作如是觀</span>
         </p>
         <p class="gloss">All conditioned things are as a dream, an illusion, a bubble, a shadow, as dew, as a flash of lightning; thus should they be contemplated. <cite>&mdash; closing verse of the Diamond Sūtra</cite></p>
+        <p class="colophon"><a href="/readme/">what this is for</a></p>
       </footer>
     </div>
     <script type="module" src="/static/js/main.js"></script>

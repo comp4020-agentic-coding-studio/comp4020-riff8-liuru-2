@@ -280,7 +280,7 @@ export function createOrb(stage, { traces, onCount }) {
     }
     if (mo.fresh > 0) {
       const g = glowSprite(m.a, 64);
-      const r = size * (6 + 3 * Math.sin(t * 3));
+      const r = size * (reducedMotion.matches ? 7 : 6 + 3 * Math.sin(t * 3));
       ctx.globalAlpha = Math.min(1, mo.fresh / 2) * 0.7;
       ctx.drawImage(g, sx - r, sy - r, r * 2, r * 2);
       ctx.globalAlpha = 1;
@@ -658,7 +658,11 @@ export function createOrb(stage, { traces, onCount }) {
   function hideSoon() {
     clearTimeout(hideTimer);
     hideTimer = setTimeout(() => {
-      if (!pinned && !hovered) reveal.classList.remove("shown");
+      if (pinned || hovered) return;
+      reveal.classList.remove("shown");
+      hideTimer = setTimeout(() => {
+        if (!reveal.classList.contains("shown")) reveal.replaceChildren();
+      }, 500);
     }, 1400);
   }
 
@@ -667,10 +671,10 @@ export function createOrb(stage, { traces, onCount }) {
     audio.play(mo.trace.kind, "touch", 0.12);
   }
 
-  function hit(x, y) {
+  function hit(x, y, finger = false) {
     let best = null;
     let score = Infinity;
-    const reach = Math.max(16, R * 0.06);
+    const reach = finger ? Math.max(26, R * 0.1) : Math.max(16, R * 0.06);
     for (const mo of motes) {
       const d = Math.hypot(mo.sx - x, mo.sy - y);
       if (d > reach) continue;
@@ -759,7 +763,7 @@ export function createOrb(stage, { traces, onCount }) {
     const [x, y] = local(e);
     pointer.x = x;
     pointer.y = y;
-    const mo = hit(x, y);
+    const mo = hit(x, y, e.pointerType !== "mouse");
     if (mo) {
       pinned = mo;
       keyIndex = motes.indexOf(mo);
@@ -790,7 +794,7 @@ export function createOrb(stage, { traces, onCount }) {
       keyIndex = motes.length - 1;
     } else if (e.key === "Escape") {
       pinned = null;
-      reveal.classList.remove("shown");
+      hideSoon();
       announce.textContent = "";
       return;
     } else return;

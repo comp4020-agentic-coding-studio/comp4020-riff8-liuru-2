@@ -353,7 +353,7 @@ function shadow(s) {
   const follower = { x: 0, y: 0 };
   return {
     seed() {
-      wisps = Array.from({ length: 34 }, () => ({ x: rand(0, s.w), y: rand(0, s.h), r: rand(20, 55), vx: 0, vy: 0 }));
+      wisps = Array.from({ length: 26 }, () => ({ x: rand(0, s.w), y: rand(0, s.h), r: rand(40, 90), vx: 0, vy: 0 }));
       follower.x = s.w * 0.7;
       follower.y = s.h * 0.4;
     },
@@ -387,8 +387,8 @@ function shadow(s) {
       ctx.fillRect(0, 0, s.w, s.h);
       for (const w of wisps) {
         const g = ctx.createRadialGradient(w.x, w.y, 0, w.x, w.y, w.r);
-        g.addColorStop(0, "rgba(3,1,6,0.42)");
-        g.addColorStop(0.7, rgba(m.a, 0.03));
+        g.addColorStop(0, "rgba(3,1,6,0.34)");
+        g.addColorStop(0.6, "rgba(24,10,34,0.14)");
         g.addColorStop(1, "rgba(3,1,6,0)");
         ctx.fillStyle = g;
         ctx.fillRect(w.x - w.r, w.y - w.r, w.r * 2, w.r * 2);

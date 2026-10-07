@@ -96,9 +96,16 @@ export function drawEssence(ctx, kind, x, y, r, t, alpha = 1) {
       ctx.ellipse(x, y, r * (1 + 0.05 * Math.sin(t * 9)), r * (1 - 0.05 * Math.sin(t * 9)), 0, 0, TAU);
       ctx.fill();
       ctx.stroke();
+      // a window-light crescent, not a blob, however large the bubble grows
+      ctx.strokeStyle = "rgba(255,255,255,0.75)";
+      ctx.lineWidth = Math.max(1.2, Math.min(4, r * 0.06));
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.arc(x, y, r * 0.78, Math.PI * 1.08, Math.PI * 1.38);
+      ctx.stroke();
       ctx.fillStyle = "rgba(255,255,255,0.85)";
       ctx.beginPath();
-      ctx.ellipse(x - r * 0.4, y - r * 0.4, r * 0.22, r * 0.12, -0.7, 0, TAU);
+      ctx.arc(x - r * 0.3, y - r * 0.62, Math.max(1, Math.min(3.5, r * 0.07)), 0, TAU);
       ctx.fill();
       break;
     }
@@ -299,7 +306,7 @@ export function startRelease(textarea, kind) {
           const sink = easeInOut(u) * (E[1] - g.y) * 0.85;
           const x = lerp(g.x, E[0], easeInOut(clamp((u - 0.4) / 0.6, 0, 1)));
           glyph(g, x, g.y + sink, 1 - u, mixRgb([236, 230, 245], [40, 20, 60], u), 1 - u * 0.4, stretch);
-          if (u > 0.05 && u < 0.9 && Math.random() < 0.18) extras.push({ x, y: g.y + sink, vx: rand(-10, 10), vy: rand(20, 60), r: rand(10, 26), age: 0, life: rand(0.6, 1.1) });
+          if (u > 0.05 && u < 0.9 && Math.random() < 0.07) extras.push({ x, y: g.y + sink, vx: rand(-25, 25), vy: rand(25, 70), r: rand(22, 48), age: 0, life: rand(0.8, 1.3) });
         }
         essence.r = 11 * easeOut(clamp((k - 0.65) / 0.35, 0, 1));
         break;
@@ -368,11 +375,13 @@ export function startRelease(textarea, kind) {
       } else {
         p.x += p.vx * dt;
         p.y += p.vy * dt;
-        const a = Math.sin((p.age / p.life) * Math.PI) * 0.4;
+        // smoke widens as it falls
+        p.r += 18 * dt;
+        const a = Math.sin((p.age / p.life) * Math.PI) * 0.35;
         const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
-        g.addColorStop(0, `rgba(4,1,10,${a})`);
-        g.addColorStop(0.7, rgba(m.a, a * 0.12));
-        g.addColorStop(1, "rgba(4,1,10,0)");
+        g.addColorStop(0, `rgba(6,2,12,${a})`);
+        g.addColorStop(0.55, `rgba(30,12,44,${a * 0.45})`);
+        g.addColorStop(1, "rgba(6,2,12,0)");
         ctx.fillStyle = g;
         ctx.fillRect(p.x - p.r, p.y - p.r, p.r * 2, p.r * 2);
       }

@@ -163,6 +163,10 @@ a:hover {
   border-radius: 3px;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -347,6 +351,7 @@ nav.meta {
 main {
   grid-column: 2;
   min-width: 0;
+  overflow-x: clip;
 }
 
 /* ---------- the composer ---------- */
@@ -1011,6 +1016,13 @@ fieldset.forms legend {
 .scry {
   padding: 2rem 0 4rem;
   text-align: center;
+  scroll-margin-top: 3.5rem;
+}
+
+.scry .ask {
+  /* leave the fixed nav pill its corner when this heading reaches the top */
+  padding-inline: clamp(0rem, 12vw - 4rem, 11rem);
+  font-size: clamp(2.1rem, 4vw, 3.8rem);
 }
 
 .scry .whisper {
@@ -1344,6 +1356,11 @@ canvas.release-layer {
   font-style: italic;
 }
 
+.colophon {
+  margin: 0;
+  font-style: italic;
+}
+
 .gloss cite {
   display: block;
   font-size: 0.95rem;
@@ -1403,6 +1420,12 @@ canvas.release-layer {
   .reveal.shown {
     opacity: 1;
   }
+
+  .reveal:empty::before {
+    content: "touch a light in the glass to read it here";
+    color: var(--muted);
+    font-style: italic;
+  }
 }
 
 @media (width <= 760px) {
@@ -1446,8 +1469,24 @@ canvas.release-layer {
     font-size: 1rem;
   }
 
+  nav.meta {
+    padding: 0.2rem;
+  }
+
   nav.meta a {
     display: none;
+  }
+
+  .sound-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+
+  .sound-toggle {
+    padding: 0.55rem;
   }
 
   .compose {
@@ -1503,6 +1542,7 @@ canvas.release-layer {
 
   .let-go {
     width: 100%;
+    padding: 0.7rem 1rem 0.8rem;
   }
 
   .orb-stage {
@@ -1518,11 +1558,6 @@ canvas.release-layer {
   }
 }
 
-@media (width <= 760px) and (pointer: coarse) {
-  .card-chosen {
-    font-size: 0;
-  }
-}
 
 @media (prefers-reduced-motion: reduce) {
   html {
