@@ -48,6 +48,7 @@ export function createOrb(stage, { traces, onCount }) {
   let keyIndex = -1;
   let hideTimer = 0;
   let pulse = 0;
+  let crowd = 1;
   let pulseRgb = NEUTRAL.a;
   let fogMix = [];
   let only = null; // when set, the glass shows one kind and dims the rest
@@ -270,7 +271,7 @@ export function createOrb(stage, { traces, onCount }) {
     const kind = mo.trace.kind;
     const depth = (z + 1) / 2; // 0 at the back, 1 at the front
     const a = clamp(0.25 + depth * 0.75, 0, 1);
-    const size = (3 + depth * 3.4) * (1 + hot * 0.9 + Math.min(1, mo.fresh) * 0.3) * (W / 800 + 0.3);
+    const size = (3 + depth * 3.4) * (1 + hot * 0.9 + Math.min(1, mo.fresh) * 0.3) * (W / 800 + 0.3) * crowd;
     const b = mo.burst !== null && mo.burst >= 0 ? mo.burst / BURST : -1;
 
     if (mo.trace.mine) {
@@ -340,12 +341,9 @@ export function createOrb(stage, { traces, onCount }) {
       }
       case "bubble": {
         const r = size * (1.5 + 0.12 * Math.sin(t * 3 + mo.ph)) * (b >= 0 && b < 0.5 ? 1 + b * 1.4 : 1);
-        if (b < 0 || b < 0.5) {
-          const g = ctx.createLinearGradient(sx - r, sy - r, sx + r, sy + r);
-          g.addColorStop(0, rgba(m.a, a));
-          g.addColorStop(0.5, rgba([255, 243, 176], a * 0.6));
-          g.addColorStop(1, rgba(m.c, a));
-          ctx.strokeStyle = g;
+        if (b < 0.5) {
+          // iridescence on the cheap: the rim's hue drifts between the bubble's two colours
+          ctx.strokeStyle = rgba(mixRgb(m.a, m.c, 0.5 + 0.5 * Math.sin(t * 0.9 + mo.ph)), a);
           ctx.lineWidth = 1.1;
           ctx.fillStyle = rgba(m.a, 0.08 * a);
           ctx.beginPath();
@@ -376,16 +374,15 @@ export function createOrb(stage, { traces, onCount }) {
       case "shadow": {
         const trail = mo.trail;
         const tl = b >= 0 ? 1 + Math.sin(b * Math.PI) * 2 : 1;
-        for (let i = 0; i < trail.length; i++) {
+        const smoke = glowSprite([2, 0, 6], 32);
+        for (let i = 0; i < trail.length; i += 2) {
           const k = i / trail.length;
           const [tx, ty] = trail[i];
           const r = size * (1.5 + (1 - k) * 2.5 * tl);
-          const g = ctx.createRadialGradient(tx, ty + (1 - k) * size * 2 * tl, 0, tx, ty, r);
-          g.addColorStop(0, `rgba(2,0,6,${0.25 * k * a})`);
-          g.addColorStop(1, "rgba(2,0,6,0)");
-          ctx.fillStyle = g;
-          ctx.fillRect(tx - r, ty - r, r * 2, r * 2 + size * 4);
+          ctx.globalAlpha = 0.5 * k * a;
+          ctx.drawImage(smoke, tx - r, ty - r + (1 - k) * size * 2 * tl, r * 2, r * 2);
         }
+        ctx.globalAlpha = 1;
         ctx.fillStyle = "rgba(4,1,10,0.95)";
         ctx.strokeStyle = rgba(m.a, a * 0.9);
         ctx.lineWidth = 1.2;
@@ -399,26 +396,27 @@ export function createOrb(stage, { traces, onCount }) {
         ctx.fill();
         if (b >= 0) {
           // touched: a ring of dark smoke unwinds downward
+          ctx.globalAlpha = 0.8 * (1 - b);
           for (let i = 0; i < 7; i++) {
             const ang = i * 0.9 + b * 2;
             const rr = size * (2 + b * 6);
-            const g = ctx.createRadialGradient(sx + Math.cos(ang) * rr, sy + Math.sin(ang) * rr * 0.5 + b * size * 6, 0, sx + Math.cos(ang) * rr, sy + Math.sin(ang) * rr * 0.5 + b * size * 6, size * 3);
-            g.addColorStop(0, `rgba(3,1,8,${0.5 * (1 - b)})`);
-            g.addColorStop(1, "rgba(3,1,8,0)");
-            ctx.fillStyle = g;
-            ctx.fillRect(sx - rr - size * 4, sy - rr - size * 4, rr * 2 + size * 8, rr * 2 + size * 16);
+            const r = size * 3;
+            ctx.drawImage(smoke, sx + Math.cos(ang) * rr - r, sy + Math.sin(ang) * rr * 0.5 + b * size * 6 - r, r * 2, r * 2);
           }
+          ctx.globalAlpha = 1;
         }
         break;
       }
       case "dew": {
         const r = size * 1.3;
-        const g = ctx.createRadialGradient(sx, sy + r * 0.4, 0, sx, sy, r);
-        g.addColorStop(0, rgba(mixRgb(m.a, m.c, 0.4), a * 0.8));
-        g.addColorStop(1, rgba(m.a, a * 0.9));
-        ctx.fillStyle = g;
+        ctx.fillStyle = rgba(m.a, a * 0.85);
         ctx.beginPath();
         ctx.arc(sx, sy, r, 0, TAU);
+        ctx.fill();
+        // the lower half catches green from below, as a bead on a leaf would
+        ctx.fillStyle = rgba(m.c, a * 0.45);
+        ctx.beginPath();
+        ctx.arc(sx, sy + r * 0.25, r * 0.7, 0, Math.PI);
         ctx.fill();
         const la = Math.atan2(pointer.sy - sy, pointer.sx - sx);
         ctx.fillStyle = rgba([255, 255, 255], 0.9 * a);
@@ -566,6 +564,8 @@ export function createOrb(stage, { traces, onCount }) {
       ctx.stroke();
     }
 
+    // a fuller glass carries smaller lights, so two hundred still read as separate thoughts
+    crowd = clamp(1.2 - motes.length / 350, 0.7, 1.1);
     const sorted = [...motes].sort((p, q) => p.z - q.z);
     for (const mo of sorted) {
       if (shown(mo)) drawMote(mo);

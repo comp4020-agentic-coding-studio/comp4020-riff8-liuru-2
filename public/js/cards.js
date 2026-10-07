@@ -393,13 +393,23 @@ function shadow(s) {
         ctx.fillStyle = g;
         ctx.fillRect(w.x - w.r, w.y - w.r, w.r * 2, w.r * 2);
       }
-      const r = 70 + 20 * s.hover;
-      const fg = ctx.createRadialGradient(follower.x, follower.y + 8, 0, follower.x, follower.y + 8, r);
-      fg.addColorStop(0, `rgba(0,0,0,${0.55 + 0.25 * s.hover})`);
-      fg.addColorStop(0.7, rgba(m.a, 0.05 * s.hover));
+      // a cast shadow: it lags behind the hand and stretches away from the card's centre, like one thrown by a low lamp
+      const dx = follower.x - s.w / 2;
+      const dy = follower.y - s.h / 2;
+      const stretch = 1.3 + Math.min(1.4, Math.hypot(dx, dy) / (s.w * 0.3));
+      const r = 46 + 14 * s.hover;
+      ctx.save();
+      ctx.translate(follower.x, follower.y);
+      ctx.rotate(Math.atan2(dy, dx));
+      ctx.scale(stretch, 0.7);
+      ctx.translate(r * 0.35, 0);
+      const fg = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+      fg.addColorStop(0, `rgba(0,0,0,${0.5 + 0.3 * s.hover})`);
+      fg.addColorStop(0.6, `rgba(10,2,16,${0.25 + 0.2 * s.hover})`);
       fg.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = fg;
-      ctx.fillRect(follower.x - r, follower.y + 8 - r, r * 2, r * 2);
+      ctx.fillRect(-r, -r, r * 2, r * 2);
+      ctx.restore();
     },
     poke(x, y) {
       for (const w of wisps) {
