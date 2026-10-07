@@ -165,7 +165,7 @@ export function renderWall(traces: Trace[], visitorId: string): string {
             </div>
 
             <fieldset class="forms">
-              <legend><span class="forms-h">Give it a form</span> <span class="whisper">one of the six as-ifs &mdash; <span class="for-hover">hover them, they answer</span><span class="for-touch">touch them, they answer</span></span></legend>
+              <legend><h2 class="forms-h">Give it a form</h2> <span class="whisper">one of the six as-ifs &mdash; <span class="for-hover">hover them, they answer</span><span class="for-touch">touch them, they answer</span></span></legend>
               <div class="cards">
           ${KINDS.map(card).join("\n          ")}
               </div>
