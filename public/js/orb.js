@@ -50,6 +50,8 @@ export function createOrb(stage, { traces, onCount }) {
   let pulse = 0;
   let pulseRgb = NEUTRAL.a;
   let fogMix = [];
+  let only = null; // when set, the glass shows one kind and dims the rest
+  const shown = (mo) => !only || mo.trace.kind === only;
 
   const makeMote = (trace, i, n) => {
     // spread evenly through the ball (a Fibonacci sphere), then jitter so it reads as weather, not a lattice
@@ -69,7 +71,7 @@ export function createOrb(stage, { traces, onCount }) {
       scale: 1,
       push: [0, 0],
       hot: 0,
-      burst: -1,
+      burst: null,
       trail: [],
       fresh: 0,
     };
@@ -207,9 +209,9 @@ export function createOrb(stage, { traces, onCount }) {
       mo.z = rz;
       mo.scale = s;
       mo.hot = approach(mo.hot, mo === hovered || mo === pinned ? 1 : 0, dt, 0.15);
-      if (mo.burst >= 0) {
+      if (mo.burst !== null) {
         mo.burst += dt;
-        if (mo.burst > BURST) mo.burst = -1;
+        if (mo.burst > BURST) mo.burst = null;
       }
       mo.fresh = Math.max(0, mo.fresh - dt);
     }
@@ -269,7 +271,7 @@ export function createOrb(stage, { traces, onCount }) {
     const depth = (z + 1) / 2; // 0 at the back, 1 at the front
     const a = clamp(0.25 + depth * 0.75, 0, 1);
     const size = (3 + depth * 3.4) * (1 + hot * 0.9 + Math.min(1, mo.fresh) * 0.3) * (W / 800 + 0.3);
-    const b = mo.burst >= 0 ? mo.burst / BURST : -1;
+    const b = mo.burst !== null && mo.burst >= 0 ? mo.burst / BURST : -1;
 
     if (mo.trace.mine) {
       ctx.strokeStyle = rgba(m.a, 0.35 * a);
@@ -565,8 +567,17 @@ export function createOrb(stage, { traces, onCount }) {
     }
 
     const sorted = [...motes].sort((p, q) => p.z - q.z);
-    for (const mo of sorted) drawMote(mo);
-    drawFragments(sorted);
+    for (const mo of sorted) {
+      if (shown(mo)) drawMote(mo);
+      else {
+        // set aside, not gone: a faint point where it hangs
+        ctx.fillStyle = `rgba(236,230,245,${0.08 + 0.08 * ((mo.z + 1) / 2)})`;
+        ctx.beginPath();
+        ctx.arc(mo.sx, mo.sy, 1.6, 0, TAU);
+        ctx.fill();
+      }
+    }
+    drawFragments(sorted.filter(shown));
 
     if (!motes.length) {
       ctx.fillStyle = "rgba(236,230,245,0.55)";
@@ -595,20 +606,20 @@ export function createOrb(stage, { traces, onCount }) {
     }
 
     // a fine thread from the light being read out to the panel reading it
-    const shown = pinned ?? hovered;
-    if (shown && reveal.classList.contains("shown") && getComputedStyle(reveal).position === "absolute") {
+    const lit = pinned ?? hovered;
+    if (lit && reveal.classList.contains("shown") && getComputedStyle(reveal).position === "absolute") {
       const cr = canvas.getBoundingClientRect();
       const rr = reveal.getBoundingClientRect();
       const tx = rr.left - cr.left;
       const ty = rr.top - cr.top + 40;
-      const g = ctx.createLinearGradient(shown.sx, shown.sy, tx, ty);
-      g.addColorStop(0, rgba(shown.m.a, 0.6));
-      g.addColorStop(1, rgba(shown.m.a, 0.05));
+      const g = ctx.createLinearGradient(lit.sx, lit.sy, tx, ty);
+      g.addColorStop(0, rgba(lit.m.a, 0.6));
+      g.addColorStop(1, rgba(lit.m.a, 0.05));
       ctx.strokeStyle = g;
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(shown.sx, shown.sy);
-      ctx.quadraticCurveTo((shown.sx + tx) / 2, Math.min(shown.sy, ty) - 30, tx, ty);
+      ctx.moveTo(lit.sx, lit.sy);
+      ctx.quadraticCurveTo((lit.sx + tx) / 2, Math.min(lit.sy, ty) - 30, tx, ty);
       ctx.stroke();
     }
   }
@@ -676,6 +687,7 @@ export function createOrb(stage, { traces, onCount }) {
     let score = Infinity;
     const reach = finger ? Math.max(26, R * 0.1) : Math.max(16, R * 0.06);
     for (const mo of motes) {
+      if (!shown(mo)) continue;
       const d = Math.hypot(mo.sx - x, mo.sy - y);
       if (d > reach) continue;
       const s = d - mo.z * 10; // nearer the glass wins a tie
@@ -781,17 +793,25 @@ export function createOrb(stage, { traces, onCount }) {
   el.addEventListener("pointercancel", (e) => endDrag(e, true));
 
   el.addEventListener("keydown", (e) => {
-    if (!motes.length) return;
+    if (!motes.some(shown)) return;
     const moves = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
+    const n = motes.length;
+    // step through only the lights currently shown
+    const stepFrom = (from, dir) => {
+      let i = from;
+      do i = (i + dir + n) % n;
+      while (!shown(motes[i]));
+      return i;
+    };
     if (e.key in moves) {
       e.preventDefault();
-      keyIndex = (keyIndex + moves[e.key] + motes.length) % motes.length;
+      keyIndex = stepFrom(keyIndex < 0 ? (moves[e.key] > 0 ? n - 1 : 0) : keyIndex, moves[e.key]);
     } else if (e.key === "Home") {
       e.preventDefault();
-      keyIndex = 0;
+      keyIndex = stepFrom(n - 1, 1);
     } else if (e.key === "End") {
       e.preventDefault();
-      keyIndex = motes.length - 1;
+      keyIndex = stepFrom(0, -1);
     } else if (e.key === "Escape") {
       pinned = null;
       hideSoon();
@@ -832,14 +852,28 @@ export function createOrb(stage, { traces, onCount }) {
 
   setInterval(() => {
     // timestamps age while the page sits open
-    const shown = pinned ?? hovered;
-    if (shown && reveal.classList.contains("shown")) {
+    const lit = pinned ?? hovered;
+    if (lit && reveal.classList.contains("shown")) {
       const time = reveal.querySelector("time");
-      if (time) time.textContent = `passed through ${relativeTime(shown.trace.createdAt)}`;
+      if (time) time.textContent = `passed through ${relativeTime(lit.trace.createdAt)}`;
     }
   }, 30_000);
 
   return {
+    /** Shows only one kind of thought (or all, given null); the rest dim to points. */
+    only(kind) {
+      only = kind;
+      if (pinned && !shown(pinned)) pinned = null;
+      if (hovered && !shown(hovered)) hovered = null;
+      if (!pinned) hideSoon();
+      const matching = motes.filter(shown);
+      if (kind && !reducedMotion.matches) matching.forEach((mo) => (mo.burst = rand(-0.4, 0)));
+      // the burst clock counts up from a small negative delay, so they answer in a ripple, not all at once
+      announce.textContent = kind
+        ? `Showing only ${META[kind].name.toLowerCase()}: ${matching.length === 1 ? "one thought" : `${matching.length} thoughts`}.`
+        : `Showing every thought: ${motes.length}.`;
+      return matching.length;
+    },
     /** Where, in viewport coordinates, a released thought should fly to. */
     centre() {
       const r = canvas.getBoundingClientRect();

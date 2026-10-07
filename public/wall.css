@@ -418,7 +418,7 @@ main {
 .pool textarea {
   display: block;
   width: 100%;
-  min-height: clamp(9.5rem, 22vh, 13rem);
+  min-height: clamp(8.5rem, 17vh, 11rem);
   padding: 1.4rem 1.5rem 3.4rem;
   color: var(--paper);
   font-family: var(--display);
@@ -1201,6 +1201,72 @@ fieldset.forms legend {
   font-style: italic;
   border: 1px solid color-mix(in oklab, var(--r-a) 60%, transparent);
   border-radius: 999px;
+}
+
+.js .kinds-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 1.6rem auto 0;
+}
+
+.legend-kind {
+  --a: var(--dream-a);
+
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.3rem 0.9rem 0.35rem 0.6rem;
+  color: var(--muted);
+  font: inherit;
+  font-size: 1.05rem;
+  font-style: italic;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.3s, border-color 0.3s, background 0.3s, transform 0.3s var(--ease-out);
+}
+
+.legend-kind[data-kind="illusion"] {
+  --a: var(--illusion-a);
+}
+
+.legend-kind[data-kind="bubble"] {
+  --a: var(--bubble-a);
+}
+
+.legend-kind[data-kind="shadow"] {
+  --a: var(--shadow-a);
+}
+
+.legend-kind[data-kind="dew"] {
+  --a: var(--dew-a);
+}
+
+.legend-kind[data-kind="lightning"] {
+  --a: var(--lightning-a);
+}
+
+.legend-hanzi {
+  font-family: var(--brush);
+  font-size: 1.3rem;
+  font-style: normal;
+  line-height: 1;
+  color: var(--a);
+}
+
+.legend-kind:hover {
+  color: var(--paper);
+  border-color: color-mix(in oklab, var(--a) 55%, transparent);
+  transform: translateY(-2px);
+}
+
+.legend-kind[aria-pressed="true"] {
+  color: var(--paper);
+  background: color-mix(in oklab, var(--a) 16%, transparent);
+  border-color: var(--a);
 }
 
 .again-wrap {

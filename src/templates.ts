@@ -210,6 +210,12 @@ export function renderWall(traces: Trace[], visitorId: string): string {
             <p class="visually-hidden orb-live" aria-live="polite" aria-atomic="true"></p>
             <p id="orb-help" class="visually-hidden">Left and right arrow keys move between thoughts; each one is read out as it comes to the front. Escape lets go of it.</p>
           </div>
+          <div class="kinds-legend js-only" role="group" aria-label="show one kind of thought at a time">
+            ${KINDS.map(
+              (k) =>
+                `<button type="button" class="legend-kind" data-kind="${k}" aria-pressed="false"><span class="legend-hanzi" lang="zh-Hant" aria-hidden="true">${KIND_META[k].hanzi}</span>${KIND_META[k].name}</button>`,
+            ).join("\n            ")}
+          </div>
           <p class="again-wrap js-only"><button type="button" class="again">leave another thought</button></p>
           <details class="ledger" open>
             <summary>every thought, as plain text</summary>

@@ -16,6 +16,7 @@ export function createAmbient(canvas) {
   let target = NEUTRAL;
   const pointer = { x: 0.5, y: 0.4, sx: 0.5, sy: 0.4 };
   let particles = [];
+  let sparks = [];
   let nextBolt = 3;
   let bolt = null;
   let flash = 0;
@@ -111,6 +112,14 @@ export function createAmbient(canvas) {
         nextBolt = rand(5, 10);
       }
     }
+    sparks = sparks.filter((p) => {
+      p.age += dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy -= 10 * dt;
+      return p.age < p.life;
+    });
+
     if (bolt) {
       bolt.age += dt;
       if (bolt.age > 0.6) bolt = null;
@@ -174,6 +183,17 @@ export function createAmbient(canvas) {
       const life = Math.min(1, p.age / 1.2, (p.life - p.age) / 1.5);
       if (life <= 0) continue;
       drawParticle(p, life);
+    }
+
+    if (sparks.length) {
+      const sprite = glowSprite(palette.a.map((v) => Math.round(v / 16) * 16), 32);
+      ctx.globalCompositeOperation = "lighter";
+      for (const p of sparks) {
+        ctx.globalAlpha = (1 - p.age / p.life) * 0.9;
+        ctx.drawImage(sprite, p.x - p.r, p.y - p.r, p.r * 2, p.r * 2);
+      }
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
     }
 
     if (bolt) {
@@ -299,6 +319,11 @@ export function createAmbient(canvas) {
       flashRgb = rgb;
       flash = 1;
       dirty = true;
+    },
+    /** A single small light, thrown up by a keystroke. */
+    spark(x, y) {
+      if (reducedMotion.matches || sparks.length > 40) return;
+      sparks.push({ x, y, vx: rand(-12, 12), vy: rand(-40, -18), age: 0, life: rand(0.7, 1.3), r: rand(3, 6) });
     },
   };
 }

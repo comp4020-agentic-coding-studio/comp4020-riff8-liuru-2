@@ -95,6 +95,18 @@ const orb = createOrb(stage, {
   },
 });
 
+const legend = [...document.querySelectorAll(".legend-kind")];
+for (const button of legend) {
+  const kind = button.dataset.kind;
+  button.addEventListener("pointerenter", () => audio.play(kind, "hover", 0.3));
+  button.addEventListener("click", () => {
+    const on = button.getAttribute("aria-pressed") !== "true";
+    legend.forEach((b) => b.setAttribute("aria-pressed", String(on && b === button)));
+    orb.only(on ? kind : null);
+    if (on) audio.play(kind, "select", 0.05);
+  });
+}
+
 // ---------------------------------------------------------------- sound
 
 soundToggle.hidden = false;
@@ -144,6 +156,10 @@ textarea.addEventListener("input", () => {
   pool.classList.add("typing");
   clearTimeout(typingTimer);
   typingTimer = setTimeout(() => pool.classList.remove("typing"), 140);
+  // each keystroke throws a small light up off the brush line, where the count has reached
+  const r = pool.getBoundingClientRect();
+  const fill = textarea.value.length / 240;
+  ambient.spark(r.left + 24 + (r.width - 48) * fill, r.bottom - 2);
   if (status.classList.contains("error") && textarea.value.trim()) setStatus("");
 });
 // Cmd/Ctrl+Enter lets it go without reaching for the button
