@@ -83,6 +83,7 @@ const shell = (title: string, bodyClass: string, body: string): string => `<!doc
     <title>${escapeHtml(title)}</title>
     <link rel="preload" href="/static/fonts/mashanzheng-subset.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/static/fonts/cormorant.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/static/wall.css" />
   </head>
   <body class="${bodyClass}">
@@ -159,7 +160,7 @@ export function renderWall(traces: Trace[], visitorId: string): string {
             </div>
 
             <fieldset class="forms">
-              <legend><span class="forms-h">Give it a form</span> <span class="whisper">one of the six as-ifs &mdash; hover them, they answer</span></legend>
+              <legend><span class="forms-h">Give it a form</span> <span class="whisper">one of the six as-ifs &mdash; <span class="for-hover">hover them, they answer</span><span class="for-touch">touch them, they answer</span></span></legend>
               <div class="cards">
           ${KINDS.map(card).join("\n          ")}
               </div>

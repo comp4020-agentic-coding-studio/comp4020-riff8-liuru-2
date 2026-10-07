@@ -28,8 +28,9 @@ web — public spaces people can actually understand the whole of, without
 tracking or an algorithmic feed — is why nothing on the wall is curated or
 ranked. The thoughts hang in a crystal ball, each one a light that moves the
 way its own as-if moves (dreams drift, shadows trail smoke, lightning
-crackles when a hand comes near), and you turn the glass to find them. No
-light is brighter for being popular, and underneath the orb the same
+crackles when a hand comes near), and you turn the glass to find them. Older
+lights grow fainter, the only ordering the glass has. No light is brighter
+for being popular, and underneath the orb the same
 thoughts sit in one plain newest-first list, for anyone who'd rather read
 than scry. What you see is what's actually there.
 

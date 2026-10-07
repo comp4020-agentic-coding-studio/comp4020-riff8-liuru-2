@@ -270,7 +270,10 @@ export function createOrb(stage, { traces, onCount }) {
     const { m, sx, sy, z, hot } = mo;
     const kind = mo.trace.kind;
     const depth = (z + 1) / 2; // 0 at the back, 1 at the front
-    const a = clamp(0.25 + depth * 0.75, 0, 1);
+    // thoughts pass: an hour-old light is a little dimmer than a new one, a week-old one dimmer still
+    const hours = (Date.now() - mo.trace.createdAt) / 3_600_000;
+    const age = clamp(1 - Math.log10(1 + hours) / 4.4, 0.45, 1);
+    const a = clamp(0.25 + depth * 0.75, 0, 1) * Math.max(age, hot);
     const size = (3 + depth * 3.4) * (1 + hot * 0.9 + Math.min(1, mo.fresh) * 0.3) * (W / 800 + 0.3) * crowd;
     const b = mo.burst !== null && mo.burst >= 0 ? mo.burst / BURST : -1;
 

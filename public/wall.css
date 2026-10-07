@@ -515,6 +515,20 @@ fieldset.forms legend {
   line-height: 1.1;
 }
 
+.for-touch {
+  display: none;
+}
+
+@media (hover: none) {
+  .for-hover {
+    display: none;
+  }
+
+  .for-touch {
+    display: inline;
+  }
+}
+
 .cards {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
