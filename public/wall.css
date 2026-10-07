@@ -963,16 +963,38 @@ fieldset.forms legend {
   cursor: progress;
 }
 
+/* a whisper at the foot of the screen, wherever the visitor happens to be */
 .status {
-  min-height: 1.6em;
+  position: fixed;
+  left: 50%;
+  bottom: 1.5rem;
+  z-index: 25;
+  max-width: min(36rem, calc(100vw - 2rem));
   margin: 0;
-  color: var(--muted);
+  padding: 0.6rem 1.3rem;
+  color: var(--paper);
   font-style: italic;
-  font-size: 1.2rem;
+  font-size: 1.15rem;
+  text-align: center;
+  background: rgb(10 8 18 / 88%);
+  border: 1px solid color-mix(in oklab, var(--k-a) 45%, transparent);
+  border-radius: 999px;
+  box-shadow: 0 10px 40px -10px color-mix(in oklab, var(--k-a) 45%, transparent);
+  backdrop-filter: blur(8px);
+  transform: translate(-50%, 0);
+  transition: opacity 0.4s, transform 0.5s var(--ease-out);
+}
+
+.status:empty {
+  opacity: 0;
+  transform: translate(-50%, 1rem);
+  pointer-events: none;
 }
 
 .status.error {
-  color: #ffb3c0;
+  color: #ffd0d8;
+  border-color: #ff8fa3aa;
+  box-shadow: 0 10px 40px -10px #ff8fa366;
 }
 
 /* ---------- the thread between composer and orb ---------- */
@@ -1543,6 +1565,11 @@ canvas.release-layer {
   .let-go {
     width: 100%;
     padding: 0.7rem 1rem 0.8rem;
+  }
+
+  .status {
+    bottom: 5.5rem;
+    border-radius: 1rem;
   }
 
   .orb-stage {

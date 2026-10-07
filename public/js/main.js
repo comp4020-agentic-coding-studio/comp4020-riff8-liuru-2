@@ -155,12 +155,49 @@ textarea.addEventListener("keydown", (e) => {
 });
 renderCount();
 
-function setStatus(message, error = false) {
+let statusTimer = 0;
+function setStatus(message, { error = false, fade = 0 } = {}) {
+  clearTimeout(statusTimer);
   status.textContent = message;
   status.classList.toggle("error", error);
+  if (fade) statusTimer = setTimeout(() => setStatus(""), fade);
+}
+
+/** Brings the composer fully into view and resolves once the page has stopped moving. */
+function revealComposer() {
+  const r = pool.getBoundingClientRect();
+  if (r.top >= 0 && r.bottom <= innerHeight) return Promise.resolve();
+  pool.scrollIntoView({ behavior: reducedMotion.matches ? "auto" : "smooth", block: "center" });
+  return new Promise((done) => {
+    let last = -1;
+    let still = 0;
+    const watch = () => {
+      still = scrollY === last ? still + 1 : 0;
+      last = scrollY;
+      if (still > 3) done();
+      else requestAnimationFrame(watch);
+    };
+    requestAnimationFrame(watch);
+  });
 }
 
 // ---------------------------------------------------------------- letting go
+
+/** The stored trace, or null if the wall didn't take it. Never throws. */
+async function postTrace(kind, text) {
+  try {
+    const res = await fetch("/trace", {
+      method: "POST",
+      headers: { accept: "application/json" },
+      body: new URLSearchParams({ kind, text }),
+    });
+    if (!res.ok) throw new Error(`the wall answered ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.warn(err);
+    return null;
+  }
+}
 
 form.noValidate = true;
 let busy = false;
@@ -172,12 +209,12 @@ form.addEventListener("submit", async (e) => {
   const text = textarea.value.trim();
   const kind = form.querySelector("input[name=kind]:checked")?.value;
   if (!text) {
-    setStatus("Write something first — even a fragment will do.", true);
+    setStatus("Write something first — even a fragment will do.", { error: true });
     textarea.focus();
     return;
   }
   if (!kind || !KINDS.includes(kind)) {
-    setStatus("Choose a form for it: one of the six above.", true);
+    setStatus("Choose a form for it: one of the six as-ifs.", { error: true });
     cardsRoot.classList.remove("nudge");
     void cardsRoot.offsetWidth;
     cardsRoot.classList.add("nudge");
@@ -189,27 +226,18 @@ form.addEventListener("submit", async (e) => {
   letGo.setAttribute("aria-disabled", "true");
   textarea.readOnly = true;
   setStatus("letting go…");
+  // the post starts at once; the words only come apart where the visitor can see them
+  const posting = postTrace(kind, text);
+  await revealComposer();
   audio.play(kind, "release", 0);
   const release = startRelease(textarea, kind);
-
-  let trace = null;
-  try {
-    const res = await fetch("/trace", {
-      method: "POST",
-      headers: { accept: "application/json" },
-      body: new URLSearchParams({ kind, text }),
-    });
-    if (!res.ok) throw new Error(`the wall answered ${res.status}`);
-    trace = await res.json();
-  } catch (err) {
-    console.warn(err);
-  }
+  const trace = await posting;
   await release.dissolved;
 
   if (!trace) {
     release.restore();
     textarea.readOnly = false;
-    setStatus("It didn’t reach the glass — the wall didn’t answer. Your words are still here; try again.", true);
+    setStatus("It didn’t reach the glass — the wall didn’t answer. Your words are still here; try again.", { error: true });
     busy = false;
     letGo.removeAttribute("aria-disabled");
     flushHeld();
@@ -227,7 +255,7 @@ form.addEventListener("submit", async (e) => {
   textarea.readOnly = false;
   textarea.classList.remove("released");
   renderCount();
-  setStatus("Let go. It’s in the glass now, with everyone else’s.");
+  setStatus("Let go. It’s in the glass now, with everyone else’s.", { fade: 6000 });
   busy = false;
   letGo.removeAttribute("aria-disabled");
   flushHeld();
