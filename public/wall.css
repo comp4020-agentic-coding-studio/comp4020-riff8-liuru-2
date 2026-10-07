@@ -1398,7 +1398,9 @@ canvas.release-layer {
 
 .readme nav.meta {
   position: static;
+  width: fit-content;
   margin-bottom: 2rem;
+  padding-right: 1rem;
 }
 
 .prose {

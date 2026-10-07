@@ -206,7 +206,7 @@ export function renderWall(traces: Trace[], visitorId: string): string {
                 <ellipse class="catch" cx="200" cy="30" rx="110" ry="14" fill="url(#catch)" />
               </svg>
             </div>
-            <aside class="reveal" aria-label="the thought you are looking at"></aside>
+            <div class="reveal"></div>
             <p class="visually-hidden orb-live" aria-live="polite" aria-atomic="true"></p>
             <p id="orb-help" class="visually-hidden">Left and right arrow keys move between thoughts; each one is read out as it comes to the front. Escape lets go of it.</p>
           </div>
