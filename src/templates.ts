@@ -117,6 +117,11 @@ function card(kind: Kind): string {
           </label>`;
 }
 
+function countLine(n: number): string {
+  if (n === 0) return "Nothing has passed through yet.";
+  return `${n === 1 ? "One thought" : `${n} thoughts`}, held for a while.`;
+}
+
 export function renderWall(traces: Trace[], visitorId: string): string {
   const items = traces.length
     ? traces.map((t) => traceItem(t, visitorId)).join("\n")
@@ -178,7 +183,7 @@ export function renderWall(traces: Trace[], visitorId: string): string {
         <section class="scry" id="scry" aria-labelledby="scry-h" data-count="${count}">
           <h2 id="scry-h" class="ask">Everything that has passed through</h2>
           <p class="whisper scry-hint">
-            <span class="scry-count">${count === 1 ? "one thought" : `${count} thoughts`}</span>, held for a while.
+            <span class="scry-count">${countLine(count)}</span>
             <span class="js-only">Drag the glass to turn it; touch a light to read it.</span>
           </p>
           <div class="orb-stage" hidden>
@@ -211,7 +216,7 @@ export function renderWall(traces: Trace[], visitorId: string): string {
             <p class="visually-hidden orb-live" aria-live="polite" aria-atomic="true"></p>
             <p id="orb-help" class="visually-hidden">Left and right arrow keys move between thoughts; each one is read out as it comes to the front. Escape lets go of it.</p>
           </div>
-          <div class="kinds-legend js-only" role="group" aria-label="show one kind of thought at a time">
+          <div class="kinds-legend js-only"${count ? "" : " hidden"} role="group" aria-label="show one kind of thought at a time">
             ${KINDS.map(
               (k) =>
                 `<button type="button" class="legend-kind" data-kind="${k}" aria-pressed="false"><span class="legend-hanzi" lang="zh-Hant" aria-hidden="true">${KIND_META[k].hanzi}</span>${KIND_META[k].name}</button>`,

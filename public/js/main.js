@@ -91,7 +91,9 @@ const orb = createOrb(stage, {
   traces,
   onCount(n) {
     scry.dataset.count = n;
-    $(".scry-count").textContent = n === 1 ? "one thought" : `${n} thoughts`;
+    $(".scry-count").textContent =
+      n === 0 ? "Nothing has passed through yet." : `${n === 1 ? "One thought" : `${n} thoughts`}, held for a while.`;
+    $(".kinds-legend").hidden = n === 0;
   },
 });
 
@@ -271,7 +273,9 @@ form.addEventListener("submit", async (e) => {
   textarea.readOnly = false;
   textarea.classList.remove("released");
   renderCount();
-  setStatus("Let go. It’s in the glass now, with everyone else’s.", { fade: 6000 });
+  setStatus(known.size > 1 ? "Let go. It’s in the glass now, with everyone else’s." : "Let go. It’s the first light in the glass.", {
+    fade: 6000,
+  });
   busy = false;
   letGo.removeAttribute("aria-disabled");
   flushHeld();
