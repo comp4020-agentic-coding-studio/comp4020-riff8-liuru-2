@@ -37,8 +37,10 @@ const insertTrace = db.prepare(
   "INSERT INTO traces (visitor_id, kind, text, created_at) VALUES (?, ?, ?, ?)",
 );
 
-export function addTrace(visitorId: string, kind: Kind, text: string): void {
-  insertTrace.run(visitorId, kind, text, Date.now());
+export function addTrace(visitorId: string, kind: Kind, text: string): Trace {
+  const createdAt = Date.now();
+  const { lastInsertRowid } = insertTrace.run(visitorId, kind, text, createdAt);
+  return { id: Number(lastInsertRowid), visitorId, kind, text, createdAt };
 }
 
 const selectRecent = db.prepare(

@@ -20,6 +20,8 @@ ENV DATA_DIR=/data
 COPY --from=build /app/node_modules ./node_modules
 COPY package.json ./
 COPY src ./src
+COPY public ./public
+COPY assets ./assets
 COPY README.md ./
 EXPOSE 8080
 CMD ["node", "src/server.ts"]
