@@ -794,7 +794,7 @@ The goal is for users in the classroom session to want to keep moving their curs
 
 # 21. Add a second crystal ball for continuous model brainstorming
 
-Use the instruction-tuned **LiquidAI/LFM2.5-230M** model:
+Use the instruction-tuned **LiquidAI/LFM2.5-230M** model as an initial candidate, not a mandatory choice:
 
 https://huggingface.co/LiquidAI/LFM2.5-230M
 
@@ -802,13 +802,31 @@ The model should repeatedly brainstorm from existing human comments and its own 
 
 ## Real inference and runtime integration
 
-Use the specified model, or a verified conversion/quantization of the same checkpoint appropriate to the chosen runtime. Do not silently substitute a different model, the base checkpoint, hard-coded phrases, or random combinations of stored messages.
+The coding agent should choose the model, parameter size, quantization level, and compatible runtime that best suit this application and its actual deployment environment. You are explicitly authorised to choose a different model without asking the user when it provides a better fit. Use a verified checkpoint or supported conversion/quantization, and document the choice rather than silently substituting models. Never replace real inference with hard-coded phrases or random combinations of stored messages.
 
 Read the model card, verify the runtime's actual support, use the correct chat template, and document the model revision, loading method, required dependencies, and licence considerations. Do not assume a model download URL is a hosted inference API or that native weights run directly in the existing JavaScript stack.
 
 Choose the simplest verified integration compatible with this repository. A local/self-hosted inference companion is acceptable if needed; browser inference is acceptable only after confirming model/runtime compatibility and testing it. Keep expensive inference off the UI thread and out of blocking guestbook request handling. Do not commit model weights to the repository or expose credentials to the browser.
 
-Treat this as an experimental lightweight associative generator. The [model card](https://huggingface.co/LiquidAI/LFM2.5-230M) cautions against creative-writing and reasoning-heavy workloads, so evaluate actual relevance, diversity, and repetition rather than assuming the small model can produce sophisticated long-form reasoning. Keep the requested model unless a deliberate, documented brief revision justifies a change.
+Treat this as an experimental lightweight associative generator. The [model card](https://huggingface.co/LiquidAI/LFM2.5-230M) cautions against creative-writing and reasoning-heavy workloads, so evaluate actual relevance, diversity, and repetition rather than assuming the small model can produce sophisticated long-form reasoning. Evaluate other suitable models when they offer a better balance of output quality, memory use, latency, and runtime compatibility; the initial candidate is not a hard requirement.
+
+## Memory-aware model and quantization selection
+
+**If an unquantized model does not fit comfortably within available memory, use a compatible quantized model. The agent decides which model and quantization level work best; neither LFM2.5-230M nor a particular bit width is mandatory.** Do not insist on full precision or abandon inference merely because the first candidate is too large.
+
+Inspect the actual inference target before choosing. Check usable RAM, VRAM or unified memory, container/process limits, and browser/runtime restrictions where relevant. Do not assume that the development machine's resources are available in production. Where limits cannot be measured, record a conservative explicit budget and mark target verification as outstanding.
+
+Budget for peak loading and generation, not just the model file: include weights, runtime overhead, activations, attention or recurrent-state caches as applicable, temporary buffers, the configured context/output lengths, and the rest of the application. Leave headroom for the guestbook and visual effects. Do not deliberately load a model that is already known not to fit.
+
+Compare a small, relevant set of compatible model sizes and quantizations. Consider 8-, 6-, 5-, or 4-bit variants, or other supported formats, only where the selected runtime and model actually support them. These are examples, not a required ladder. A smaller model at higher precision and a larger, more heavily quantized model are both legitimate candidates; decide from evidence, not parameter count or bit width alone. Verify the quantized artifact's provenance, checkpoint revision, licence, tokenizer/chat template, and runtime support.
+
+Choose the best practical balance of stable memory use, relevance to human comments, variety, repetition resistance, generation latency, and deployment simplicity. Run representative inference and repeated generation/compaction on the selected configuration. Record peak memory and latency where measurable, alongside a brief output-quality assessment. Do not assume that lower precision is always faster or that successful model loading proves sustained inference will fit.
+
+For insufficient memory or an out-of-memory failure, use a bounded fallback strategy chosen by the agent: a more memory-efficient supported quantization, a smaller model, a shorter context/output budget, or a suitable alternative execution backend. Release the failed model and its resources before loading another; do not keep multiple candidate models resident unnecessarily or repeatedly retry a configuration known not to fit. Preserve valid thought memory, reapply the selected model's token budget and chat template, and keep the single-flight generation rule intact.
+
+Make the chosen model, revision, quantized artifact/format, runtime/device, and context/output limits configurable. Record the effective configuration and selection rationale in the project documentation; update model labels and tests when the choice changes. A model switch must not reset valid human data or disguise the model actually running.
+
+Test constrained-memory handling and recovery. If no verified configuration fits, retain the last valid thoughts, show an honest unavailable state, and keep the human guestbook usable. Distinguish measured behaviour from estimates, simulated failure tests, and checks that could not be run. Autonomous selection does not authorise new paid services or credentials beyond existing permissions.
 
 ## Continuous generation loop
 
@@ -931,7 +949,7 @@ The final experience should have:
 - a memorable elemental submission sequence
 - coherent particle feedback for mouse actions and comments
 - a compelling human-comment crystal ball with cycling or floating messages
-- a distinct second crystal ball powered by real LFM2.5-230M inference
+- a distinct second crystal ball powered by real inference using the agent-selected model and appropriate quantization
 - continuous brainstorming grounded in human comments and bounded model memory
 - playful discovery of other people's messages
 - strong responsiveness

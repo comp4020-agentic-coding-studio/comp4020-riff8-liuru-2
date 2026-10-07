@@ -291,6 +291,18 @@ Do not introduce external services requiring credentials unless they are already
 
 ---
 
+# Autonomous Model and Quantization Selection
+
+Choose the application model and quantization yourself, following the memory-aware selection requirements in `prompt.md`. LFM2.5-230M is a starting candidate, not a fixed dependency. You may choose another suitable model, a different parameter size, or a supported quantization without asking the user. This concerns the application's inference model, not the underlying model of the coding agent.
+
+If memory is insufficient for an unquantized candidate, use a compatible quantized model or a better-fitting alternative. Do not force full precision, assume a particular bit width is optimal, or disable the feature after only one unsuitable candidate. Inspect the actual deployment limits and compare representative memory use, latency, output quality, and runtime support. Prefer a configuration that runs reliably with headroom over one that barely loads.
+
+Treat this as an engineering decision, not a request for user approval. Document the selected model/revision, quantization artifact, runtime, memory budget, context limits, measured results, and fallback behaviour. Keep configuration, UI attribution, the brief, and tests consistent. Preserve the working thought memory across fallback, avoid repeated out-of-memory loops or simultaneous candidate loads, and leave the human guestbook unaffected by inference failure.
+
+Generous development time and cost allowances do not require an oversized deployed model or permission to add unapproved paid infrastructure. When the deployment target cannot be tested, state that limitation and distinguish estimates from measurements rather than claiming the choice is verified.
+
+---
+
 # Responsive Design
 
 Desktop quality alone is not sufficient.
@@ -382,7 +394,8 @@ For an interactive application, verify things such as:
 - particle feedback across pointer actions and comments without blocking normal input
 - readable human-comment cycling/floating, pause, and full-text inspection
 - distinct human/model attribution across both crystal balls
-- actual LFM2.5-230M loading and inference, not merely mocked output
+- actual loading and inference using the selected model and quantized artifact, where applicable, not merely mocked output
+- peak memory at the configured context/output limits and constrained-memory fallback/recovery
 - continuous generation with and without newly arriving human comments
 - single-flight scheduling, reconnects, multiple viewers, and pause/resume
 - repeated memory compaction, hard size limits, and persistence/recovery
@@ -535,7 +548,7 @@ Before marking an iteration verified or handing off the current session:
 10. Fix obvious visual inconsistencies.
 11. Verify there are no unfinished placeholder sections.
 12. Make a deliberate polish pass.
-13. Verify the twin-orb, particle, continuous-inference, and bounded-memory requirements.
+13. Verify the twin-orb, particle, memory-aware model/quantization selection, continuous-inference, and bounded-memory requirements.
 14. Reconcile the product brief, harness, and current implementation after any deliberate changes of direction.
 15. Record the next improvement hypothesis and a resumable checkpoint.
 
@@ -556,7 +569,8 @@ A checkpoint is ready only when:
 - the visual design is cohesive
 - interactions and animations feel intentional
 - both crystal balls and the particle interactions satisfy the current brief
-- actual model inference and repeated bounded-memory compaction have been verified
+- actual inference with the selected model/quantization and repeated bounded-memory compaction have been verified
+- model memory use, headroom, and constrained-memory handling have been checked against the declared deployment budget
 - generated thoughts remain separate from human data
 - the prompts, harness, implementation, and recorded verification agree
 - there are no obvious placeholder areas
