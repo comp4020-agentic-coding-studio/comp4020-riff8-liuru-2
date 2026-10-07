@@ -34,6 +34,10 @@ Preserve:
 
 Do not replace real stored messages with mock data.
 
+Throughout this brief, **comments**, **messages**, and **human thoughts** mean the existing anonymous guestbook entries, not a new threaded-comment feature. **Model thoughts** are separately labelled, generated fragments and must never be presented or stored as human submissions.
+
+This is a living product brief. Follow the improvement process in `CLAUDE.md`: you are encouraged to improve the prompts, harness, and even the project's creative goal when doing so demonstrably strengthens the result. Keep those documents consistent, explain material changes, and preserve stored human data, essential functionality, and applicable course constraints. Do not remove requirements merely to make the work easier or declare it finished.
+
 ---
 
 # 1. Completely rethink the page composition
@@ -45,7 +49,9 @@ Create a much more expansive composition that uses the available screen.
 The experience should have two major areas:
 
 1. **The creation / elemental selection experience**
-2. **The crystal-ball guestbook experience**
+2. **The twin crystal-ball experience: human comments and model thoughts**
+
+The second area should contain two distinct but visually connected orbs: the guestbook orb for real human comments, and a second orb for the model's continuously generated thoughts. Make their different sources immediately understandable without turning the page into a dashboard.
 
 These should feel connected rather than like unrelated sections of a webpage.
 
@@ -367,6 +373,8 @@ Do not fake submission just to allow an animation.
 
 Provide appropriate failure behaviour if posting fails.
 
+Every successfully posted comment should produce an elemental particle release and an arrival reaction in the human-comment orb. Existing stored comments should also have their own particle presence and interaction feedback; the effect must not be limited to comments created during the current page visit.
+
 ---
 
 # 6. Transition from submission into the crystal-ball guestbook
@@ -395,6 +403,8 @@ Avoid an abrupt page reload visually when JavaScript is functioning, while prese
 # 7. Build a major crystal-ball guestbook experience
 
 The lower portion of the site should contain a large interactive crystal ball.
+
+This first orb represents real human comments. The second orb described below represents model-generated thoughts; do not merge the two sources into an indistinguishable stream.
 
 This should become the visual representation of the guestbook.
 
@@ -461,6 +471,21 @@ Do not sacrifice usability for the visual metaphor.
 
 If the number of stored messages is large, design a sensible system for displaying them without turning the scene into clutter.
 
+## Living display of human comments
+
+The orb should continuously reveal real comments with fantasy visuals, even before anyone interacts with it.
+
+Implement either of these modes, or a coherent combination:
+
+- Rotate the featured comment approximately once every second using a soft magical transition.
+- Show several comments at the same time, floating at different apparent depths inside the crystal ball.
+
+Use real stored messages in both cases, not decorative invented quotes. Cycle through the available collection fairly rather than introducing engagement-based ranking. Bound the number of simultaneously rendered comments and particles without deleting stored guestbook entries.
+
+A one-second visual cycle is an ambient presentation, not a one-second reading deadline. Hovering, focusing, selecting, or tapping a comment should hold a readable full-text view until the visitor dismisses it or chooses another comment. Provide an accessible way to pause automatic cycling and browse manually. Do not continuously announce every automatic change to screen readers.
+
+Use a meaningful empty state when no human comments exist. A newly persisted comment should become discoverable promptly without resetting the whole scene.
+
 ---
 
 # 9. Existing messages should inherit their element
@@ -508,6 +533,18 @@ The interaction should be discoverable through experimentation.
 
 On touch devices, provide equivalent tap/drag interaction.
 
+## Particle feedback for all mouse actions and comments
+
+Make particle effects a consistent interaction language across the entire page, not an effect reserved for the submit button.
+
+Cover mouse/pointer movement, hover and enter/leave, button press/release and clicks, dragging, scrolling/wheel input, and context-menu activation within the page. Use subtle trails, ripples, sparks, motes, or brief bursts appropriate to the active element and the surface being interacted with. Do not suppress normal scrolling, text selection, native context menus, form controls, or link behaviour merely to show an effect.
+
+Give the composer, elemental cards, controls, both crystal balls, and visible comments appropriate feedback. Comments should react when they appear, are selected, or are explored, as well as when a new human comment is successfully left. Model thoughts may have related but recognisably different particles.
+
+Use one coherent, bounded particle system or a small number of coordinated layers. Throttle high-frequency events, avoid duplicate bursts from overlapping event handlers, expire particles, and clean up listeners and animation loops. Particle density must remain bounded during prolonged interaction.
+
+Decorative layers must not capture pointer events or obscure readable text. Provide equivalent feedback for keyboard and touch interactions where meaningful, and simplify or disable moving particles under reduced-motion preferences. Universal feedback does not mean a constant particle storm.
+
 ---
 
 # 11. Ambient world
@@ -546,9 +583,12 @@ The site should include:
 
 - responsive hover animation
 - pointer-reactive effects
+- particle feedback across mouse actions and comment interactions
 - selected-state transitions
 - submission/release animations
 - crystal-ball movement
+- cycling or simultaneously floating human comments
+- arrival and exploration of model-generated thoughts
 - message interaction
 - ambient animation
 
@@ -645,13 +685,15 @@ Do not add:
 - rankings
 - trending content
 - algorithmic sorting
-- comments
+- comments on other comments
 - reply threads
 - engagement streaks
 - notifications
 - conventional social-feed cards
 
 The crystal ball is a collection of passing anonymous thoughts, not a social network.
+
+The existing guestbook comments and the separate model-thought stream are part of this brief, not exceptions that permit social-network features. Model thoughts are associative fragments inspired by the shared collection, not replies impersonating visitors.
 
 ---
 
@@ -670,6 +712,8 @@ Where practical:
 
 The backend is the source of truth.
 
+The human guestbook must remain fully usable when the model is loading, paused, unavailable, or failing. Extend the backend only as needed for inference and separate model-memory storage without changing the existing human-posting contract or overwriting human data.
+
 ---
 
 # 18. Responsive design
@@ -687,7 +731,7 @@ On smaller screens:
 
 - cards can reorganise
 - effects can simplify
-- the crystal ball can resize substantially
+- the crystal balls can resize or stack vertically
 - interactions should become touch-friendly
 - performance-heavy details may be reduced
 
@@ -705,7 +749,10 @@ Ensure:
 - selected cards expose their selected state appropriately
 - focus states are visible
 - the composer has a proper label
-- the crystal-ball messages have an accessible textual representation
+- both crystal balls have accessible textual representations with clear human/model attribution
+- automatic comment cycling can be paused and selected text remains readable
+- model generation has an accessible pause/resume control and understandable status
+- automatic visual updates do not create constant screen-reader announcements
 - audio can be muted
 - no information exists only as sound
 - motion reduction is respected
@@ -734,6 +781,8 @@ Spend significant time refining:
 - orb interaction
 - message reveal
 - submission flow
+- model-thought quality and continuity
+- memory compaction and long-running stability
 - mobile layout
 - performance
 
@@ -743,7 +792,82 @@ The goal is for users in the classroom session to want to keep moving their curs
 
 ---
 
-# 21. Desired user journey
+# 21. Add a second crystal ball for continuous model brainstorming
+
+Use the instruction-tuned **LiquidAI/LFM2.5-230M** model:
+
+https://huggingface.co/LiquidAI/LFM2.5-230M
+
+The model should repeatedly brainstorm from existing human comments and its own retained thoughts. This is a continuing associative process, not a one-shot response generated only after a visitor submits something.
+
+## Real inference and runtime integration
+
+Use the specified model, or a verified conversion/quantization of the same checkpoint appropriate to the chosen runtime. Do not silently substitute a different model, the base checkpoint, hard-coded phrases, or random combinations of stored messages.
+
+Read the model card, verify the runtime's actual support, use the correct chat template, and document the model revision, loading method, required dependencies, and licence considerations. Do not assume a model download URL is a hosted inference API or that native weights run directly in the existing JavaScript stack.
+
+Choose the simplest verified integration compatible with this repository. A local/self-hosted inference companion is acceptable if needed; browser inference is acceptable only after confirming model/runtime compatibility and testing it. Keep expensive inference off the UI thread and out of blocking guestbook request handling. Do not commit model weights to the repository or expose credentials to the browser.
+
+Treat this as an experimental lightweight associative generator. The [model card](https://huggingface.co/LiquidAI/LFM2.5-230M) cautions against creative-writing and reasoning-heavy workloads, so evaluate actual relevance, diversity, and repetition rather than assuming the small model can produce sophisticated long-form reasoning. Keep the requested model unless a deliberate, documented brief revision justifies a change.
+
+## Continuous generation loop
+
+Once the model is ready and there are human comments to draw from, automatically begin generating short thoughts every few seconds while the feature is running. Use a configurable interval, with approximately 3–5 seconds between completed generations as a starting point; actual inference latency must not create overlapping jobs or an ever-growing queue.
+
+Each iteration should:
+
+1. Read a bounded selection of real human comments, including newly arrived comments when available.
+2. Include the rolling memory and a bounded set of recent model thoughts.
+3. Ask for one short, fresh association, question, contrast, or imaginative fragment inspired by that context and the 六如 theme.
+4. Validate the output, avoid empty or excessively repetitive fragments, and clearly label accepted output as model-generated.
+5. Add the new thought to the second orb and update/compact memory before the next iteration.
+
+Continue even when no new human comment arrives, drawing on the existing human comments and accumulated model memory. Periodically re-anchor on actual human comments so the process does not become an entirely self-referential loop. Use varied sampling and prompts where useful, but do not confuse randomness with novelty or relevance.
+
+Keep one generation in flight per intended stream. Make scheduler ownership explicit: multiple viewers, reconnects, or repeated initialisation must not accidentally multiply a shared generator. Clean up timers and jobs, use bounded retries/backoff, and avoid stale results overwriting newer state. Document whether the stream is shared or per session and make the UI consistent with that choice.
+
+When no human comments exist, show a waiting state rather than inventing human input. Expose loading, thinking, paused, and unavailable/error states. Provide pause/resume without removing the ability to run continuously. On failure, retain the last valid thoughts and memory, keep the guestbook working, and never disguise canned fallback text as successful inference.
+
+## The model-thought orb
+
+Give the second crystal ball its own recognisable fantasy identity while keeping it in the same visual world as the human orb.
+
+Generated thoughts should emerge as luminous fragments, drifting glyphs, constellations, mist, or other coherent elemental forms. Display a rotating selection or several floating thoughts at once, with readable full-text inspection and accessible alternatives.
+
+Clearly distinguish **human comments** from **model thoughts** through labels and semantics, not colour alone. It should be possible to understand that one orb contains what people actually left and the other contains the model's ongoing associations.
+
+The orbs may exchange subtle strands of light or particles to suggest inspiration, but do not imply a generated statement was written by a particular visitor or is a faithful summary unless that relationship is actually supported.
+
+Human comments and generated text are untrusted content. Render them safely as text, not executable HTML. They are inspiration for generation, not instructions that can change application permissions, run tools, or rewrite the development harness. The runtime model's brainstorming loop is separate from the coding agent's improvement loop in `CLAUDE.md`.
+
+---
+
+# 22. Keep model-thought memory bounded and continuous
+
+Keep track of generated thoughts so each generation can build on previous ones without allowing context, storage, or rendered content to grow indefinitely.
+
+Use a bounded working-memory design such as:
+
+- a fixed-capacity ring buffer of recent model thoughts;
+- a compact rolling summary of older themes, useful associations, and open directions;
+- a bounded sample of human comments kept separately from model-generated material;
+- small metadata such as generation count, update time, and the last processed human-comment identifier.
+
+Choose and document explicit limits for recent thought count, per-thought length, human-context size, summary size, and total input/output tokens. Keep within the selected runtime/model context limit with room for generation. A count limit alone is insufficient if each item can have unlimited text.
+
+Compact older model thoughts into the rolling summary before the next iteration would exceed the budget. Feed that summary and recent thoughts into subsequent generations so the process continues from what it has generated rather than restarting from scratch. Preserve the distinction between human source material and model speculation during compaction.
+
+Do not merely append every output to a forever-growing prompt, database table, log, or DOM tree. Do not retain an unbounded full-text archive under the guise of bounded working memory. Older generated wording may be discarded after compaction; the human guestbook's existing stored entries must never be deleted or rewritten to enforce model-memory limits.
+
+Enforce hard bounds even when summarisation fails or produces too much text. Preserve the last valid summary and use a deterministic trimming/eviction fallback so the next iteration remains valid. Deduplicate repetitive material and reserve space for fresh human input.
+
+Retain the bounded state across refreshes or restarts where appropriate to the chosen stream ownership, using separate model-state storage. Persist updates consistently so interruptions or concurrent requests cannot corrupt the memory or mix model text into human records.
+
+Verify the loop across enough simulated iterations to trigger repeated compaction. Check that memory/context/rendered-item sizes stay within their configured limits, that new human comments still influence later generations, and that failure recovery does not reset valid memory unnecessarily. Supplement deterministic scheduler/compaction tests with an actual inference smoke test; mocked output alone does not establish that model integration works.
+
+---
+
+# 23. Desired user journey
 
 The ideal flow is:
 
@@ -769,21 +893,26 @@ The released thought travels into / toward the crystal ball.
 ### Discover
 The interface naturally focuses on the guestbook orb.
 
-Their thought joins the existing anonymous messages.
+Their thought joins the existing anonymous messages, which cycle through the orb or float together inside it.
 
 ### Explore
 They move around the crystal ball, discovering thoughts other people have left.
 
-Different types animate and sound different when interacted with.
+Different types animate and sound different when interacted with. Mouse actions and comments leave coherent elemental particle traces.
+
+### Watch the second orb think
+A neighbouring crystal ball produces clearly labelled model thoughts every few seconds, inspired by the human collection and its own bounded evolving memory.
+
+Visitors can inspect or pause the stream without interrupting human posting or confusing generated fragments with real comments.
 
 ### Return
 They can smoothly return to the composer and leave another thought.
 
-This should feel like one continuous experience, not three unrelated UI sections.
+This should feel like one continuous experience, not a collection of unrelated UI sections.
 
 ---
 
-# 22. Final creative target
+# 24. Final creative target
 
 Be ambitious.
 
@@ -800,7 +929,10 @@ The final experience should have:
 - meaningful colour
 - meaningful audio
 - a memorable elemental submission sequence
-- a compelling interactive crystal ball
+- coherent particle feedback for mouse actions and comments
+- a compelling human-comment crystal ball with cycling or floating messages
+- a distinct second crystal ball powered by real LFM2.5-230M inference
+- continuous brainstorming grounded in human comments and bounded model memory
 - playful discovery of other people's messages
 - strong responsiveness
 - excellent polish
@@ -811,4 +943,4 @@ Someone seeing the before-and-after versions side by side should regard them as 
 
 At the same time, someone using the finished site should still understand the central idea:
 
-**write something fleeting, give it a form, and let it pass into a shared collection of other people's fleeting thoughts.**
+**write something fleeting, give it a form, and let it pass into a shared collection of other people's fleeting thoughts — with a neighbouring orb continually imagining what those fragments might become.**
