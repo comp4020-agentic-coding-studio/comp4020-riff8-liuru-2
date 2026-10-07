@@ -519,7 +519,7 @@ fieldset.forms legend {
   display: none;
 }
 
-@media (hover: none) {
+@media (hover: none) and (pointer: coarse) {
   .for-hover {
     display: none;
   }
@@ -1573,12 +1573,16 @@ canvas.release-layer {
     font-size: 1rem;
   }
 
-  nav.meta {
+  .wall-page nav.meta {
     padding: 0.2rem;
   }
 
-  nav.meta a {
+  .wall-page nav.meta a {
     display: none;
+  }
+
+  .readme {
+    padding-top: 1.5rem;
   }
 
   .sound-label {
