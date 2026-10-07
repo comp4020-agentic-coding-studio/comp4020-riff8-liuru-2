@@ -201,13 +201,16 @@ function revealComposer() {
 
 // ---------------------------------------------------------------- letting go
 
-/** The stored trace, or null if the wall didn't take it. Never throws. */
-async function postTrace(kind, text) {
+const POST_TIMEOUT = 12_000;
+
+/** The stored trace, or null if the wall didn't take it (or didn't say in time). Never throws. */
+async function postTrace(kind, text, release) {
   try {
     const res = await fetch("/trace", {
       method: "POST",
       headers: { accept: "application/json" },
-      body: new URLSearchParams({ kind, text }),
+      body: new URLSearchParams({ kind, text, release }),
+      signal: AbortSignal.timeout(POST_TIMEOUT),
     });
     if (!res.ok) throw new Error(`the wall answered ${res.status}`);
     return await res.json();
@@ -245,12 +248,22 @@ form.addEventListener("submit", async (e) => {
   textarea.readOnly = true;
   setStatus("letting go…");
   // the post starts at once; the words only come apart where the visitor can see them
-  const posting = postTrace(kind, text);
+  const token = crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
+  const posting = postTrace(kind, text, token);
   await revealComposer();
   audio.play(kind, "release", 0);
   const release = startRelease(textarea, kind);
-  const trace = await posting;
+  let trace = await posting;
   await release.dissolved;
+  if (!trace) {
+    // the reply was lost, but the wall may have stored it anyway: if our own
+    // token came back on the live stream, it did
+    const echoed = heldEvents.find((t) => t.release === token);
+    if (echoed) {
+      trace = { ...echoed, mine: true };
+      heldEvents = heldEvents.filter((t) => t !== echoed);
+    }
+  }
 
   if (!trace) {
     release.restore();
@@ -265,6 +278,11 @@ form.addEventListener("submit", async (e) => {
   known.add(trace.id);
   scry.scrollIntoView({ behavior: reducedMotion.matches ? "auto" : "smooth", block: "start" });
   await release.fly(() => orb.centre());
+  // a thought always arrives into the whole glass, not a filtered view of it
+  if (legend.some((b) => b.getAttribute("aria-pressed") === "true")) {
+    legend.forEach((b) => b.setAttribute("aria-pressed", "false"));
+    orb.only(null);
+  }
   orb.receive(trace);
   ambient.flash(META[kind].a);
   addToLedger(trace);

@@ -204,7 +204,7 @@ export function createOrb(stage, { traces, onCount }) {
       if (kind === "shadow" && !calm) {
         mo.trail.push([sx, sy]);
         if (mo.trail.length > 14) mo.trail.shift();
-      }
+      } else if (mo.trail.length) mo.trail.length = 0;
       mo.sx = sx;
       mo.sy = sy;
       mo.z = rz;

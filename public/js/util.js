@@ -37,7 +37,9 @@ export function fitCanvas(canvas, maxDpr = 2) {
 
 /** A soft round sprite, pre-rendered once and stamped many times (cheaper than shadowBlur). */
 const glowCache = new Map();
-export function glowSprite(rgb, size = 64) {
+export function glowSprite(colour, size = 64) {
+  // colours that drift every frame must share sprites, or the cache grows without end
+  const rgb = colour.map((v) => Math.min(255, Math.round(v / 8) * 8));
   const key = `${rgb.join(",")}:${size}`;
   let c = glowCache.get(key);
   if (!c) {

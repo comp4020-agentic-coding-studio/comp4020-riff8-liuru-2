@@ -353,10 +353,15 @@ async function startMusic() {
     }
   } catch (err) {
     console.warn("bubble music unavailable", err);
-    music = null;
+    if (music?.gain === gain) music = null;
+    gain.disconnect();
     return;
   }
-  if (!musicWanted || music?.gain !== gain) return;
+  // a later choice may have stopped or replaced this attempt while it loaded
+  if (!musicWanted || music?.gain !== gain) {
+    gain.disconnect();
+    return;
+  }
   const source = ctx.createBufferSource();
   source.buffer = musicBuffer;
   source.loop = true;

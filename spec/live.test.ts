@@ -66,3 +66,23 @@ it("serves the client, and nothing outside it", async () => {
     expect(res.status, path).toBe(404);
   }
 });
+
+it("shrugs off a malformed cookie or Host header instead of falling over", async () => {
+  const bad = await fetch(new URL("/", baseUrl), { headers: { cookie: "other=%E0%A4; visitor=%" } });
+  expect(bad.status).toBe(200);
+
+  const { request } = await import("node:http");
+  const url = new URL(baseUrl);
+  const status = await new Promise<number | undefined>((resolve, reject) => {
+    const req = request({ host: url.hostname, port: url.port, path: "/", headers: { host: "[::bad" } }, (res) => {
+      res.resume();
+      resolve(res.statusCode);
+    });
+    req.on("error", reject);
+    req.end();
+  });
+  expect(status).toBe(200);
+
+  // and it is still there afterwards
+  expect((await fetch(new URL("/", baseUrl))).status).toBe(200);
+});

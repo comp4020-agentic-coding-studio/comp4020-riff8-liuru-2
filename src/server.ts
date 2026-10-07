@@ -34,7 +34,11 @@ function parseCookies(header: string | undefined): Record<string, string> {
   for (const part of header.split(";")) {
     const eq = part.indexOf("=");
     if (eq === -1) continue;
-    out[part.slice(0, eq).trim()] = decodeURIComponent(part.slice(eq + 1).trim());
+    try {
+      out[part.slice(0, eq).trim()] = decodeURIComponent(part.slice(eq + 1).trim());
+    } catch {
+      // a malformed cookie (perhaps another app's on the same host) is skipped, not fatal
+    }
   }
   return out;
 }
@@ -102,8 +106,10 @@ async function serveStatic(
 // them, so the orb fills while you watch rather than on your next reload.
 const listeners = new Set<ServerResponse>();
 
-function broadcast(trace: Trace): void {
-  const data = `event: trace\ndata: ${JSON.stringify(publicTrace(trace, ""))}\n\n`;
+// `release` is the posting page's own random token, echoed so that page can
+// recognise its thought on the stream even if the POST's reply never reaches it.
+function broadcast(trace: Trace, release: string): void {
+  const data = `event: trace\ndata: ${JSON.stringify({ ...publicTrace(trace, ""), release })}\n\n`;
   for (const res of listeners) res.write(data);
 }
 
@@ -112,14 +118,14 @@ setInterval(() => {
 }, 25_000).unref();
 
 const server = createServer(async (req, res) => {
-  const url = new URL(req.url ?? "/", `http://${req.headers.host}`);
-  const cookies = parseCookies(req.headers.cookie);
-  const existingVisitor = cookies[VISITOR_COOKIE];
-  const visitorId = existingVisitor ?? randomUUID();
-  const setCookie = existingVisitor ? undefined : visitorCookie(visitorId);
-  const cookieHeader = setCookie ? { "set-cookie": setCookie } : {};
-
   try {
+    const url = new URL(req.url ?? "/", "http://localhost");
+    const cookies = parseCookies(req.headers.cookie);
+    const existingVisitor = cookies[VISITOR_COOKIE];
+    const visitorId = existingVisitor ?? randomUUID();
+    const setCookie = existingVisitor ? undefined : visitorCookie(visitorId);
+    const cookieHeader = setCookie ? { "set-cookie": setCookie } : {};
+
     if (url.pathname === "/" && req.method === "GET") {
       const html = renderWall(recentTraces(), visitorId);
       res.writeHead(200, { "content-type": "text/html; charset=utf-8", ...cookieHeader });
@@ -134,7 +140,7 @@ const server = createServer(async (req, res) => {
       const text = (params.get("text") ?? "").trim().slice(0, 240);
       const valid = isKind(kind) && text.length > 0;
       const trace = valid ? addTrace(visitorId, kind, text) : undefined;
-      if (trace) broadcast(trace);
+      if (trace) broadcast(trace, (params.get("release") ?? "").slice(0, 64));
 
       if (wantsJson(req)) {
         res.writeHead(trace ? 201 : 400, {
