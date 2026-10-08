@@ -25,22 +25,18 @@ trying to make you come back.
 
 The [Small Technology Foundation](https://small-tech.org/)'s case for a small
 web — public spaces people can actually understand the whole of, without
-tracking or an algorithmic feed — is why nothing on the wall is curated or
-ranked. The thoughts hang in a crystal ball, each one a light that moves the
-way its own as-if moves (dreams drift, shadows trail smoke, lightning
-crackles when a hand comes near), and you turn the glass to find them. Older
-lights grow fainter, the only ordering the glass has. No light is brighter
-for being popular, and underneath the orb the same
-thoughts sit in one plain newest-first list, for anyone who'd rather read
-than scry. What you see is what's actually there.
+tracking or an algorithmic feed — is why the wall shows everything in one
+plain reverse-chronological list, oldest at the bottom, nothing curated or
+ranked. What you see is what's actually there.
 
 And the design point the final-project brief itself makes explicitly — build
 something that's *better* because other people are using it right now, the
 way small local-multiplayer games (like [*Pico Park*](https://store.steampowered.com/app/1509960/PICO_PARK/))
-only work because everyone is present at once — is why the orb is live. When
-someone else lets a thought go, it falls into your glass while you watch,
-without a reload. That's the whole of the co-presence: no names, no
-"someone is typing", just the sense that the ball is filling.
+only work because everyone is present at once — is what this slice doesn't
+have yet. The wall updates on reload, not live; a second visitor's trace
+doesn't appear until you refresh. That's deliberate for this week (this
+crit's own brief says the real-time layer can wait), but it's the one thing
+standing between this and actually delivering co-presence. Next crit's job.
 
 ## What's enforced vs. what's judged
 
@@ -51,27 +47,16 @@ survive a restart or a redeploy — not just the current process.
 
 Judged, by me now and by a reader later: whether the wall actually feels like
 the six similes it's named after, not a message board with a select box on
-it, and whether the orb stays legible once real people have filled it.
+it, and whether the plain list stays legible once real people have used it.
 I haven't built moderation, rate limiting, or a way to remove a trace — for a
 wall this small, the honest position is that I haven't yet had a reason to
 need any of them, not that I've reasoned my way out of needing them forever.
 
 ## What I deliberately didn't build yet
 
-No visible distinction between visitors beyond "yours vs. everyone else's"
-(no names, colours, or avatars), no server-side logging beyond what Fly
-captures by default (crit 11), and no moderation. All three are real gaps,
-not oversights.
-
-## Sound, type and licences
-
-Every sound except the Bubble music is synthesised in the browser with the
-Web Audio API (`public/js/audio.js`): six small palettes, one per as-if, so
-there is no third-party audio to license. Sound starts only after you touch
-the page, and the control in the corner mutes it for the session. The Bubble
-music, `assets/bubble_background_music.mp3`, was supplied with this riff's
-brief by the pod that wrote it. The hanzi are set in
-[Ma Shan Zheng](https://fonts.google.com/specimen/Ma+Shan+Zheng) and the text
-in [Cormorant Garamond](https://fonts.google.com/specimen/Cormorant+Garamond),
-both under the SIL Open Font License; the subsets and their licence texts
-are in `public/fonts/`.
+No real-time updates (crit 9), no visible distinction between visitors beyond
+"yours vs. everyone else's" (no names, colours, or avatars — deferred until
+there's an actual multi-user feature that needs it), no server-side logging
+beyond what Fly captures by default (crit 11), and no moderation. All four are
+real gaps, not oversights, and each has a crit on the course's own schedule
+that's the right place to close it.
