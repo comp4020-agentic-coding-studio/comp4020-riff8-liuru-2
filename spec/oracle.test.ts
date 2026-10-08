@@ -153,6 +153,8 @@ describe("model memory", () => {
     const visitor = [{ id: 1, kind: "dew", text: "wet grass on the walk to the 8am lecture" }];
     expect(isRepetitive("Wet grass on the walk to the 8am lecture.", m, visitor)).toBe(true);
     expect(cleanThought("")).toBeNull();
+    expect(cleanThought("I may know that it arrives")).toBeNull();
+    expect(cleanThought("A memory of rain on cool glass")).toBe("A memory of rain on cool glass");
     expect(cleanThought("Sure, here is a fragment")).toBeNull();
     expect(cleanThought("I'm stuck—let's craft something fresh!\n\n**New Fragment:** A cracked teacup hums with static.")).toBe(
       "A cracked teacup hums with static.",
@@ -165,7 +167,7 @@ describe("model memory", () => {
     expect(isRepetitive("Quiet contrast between the clamor and stillness", emptyMemory(), [], "a quiet contrast between two of them")).toBe(true);
     expect(cleanThought("Small scene—childhood laughter echoes under curt light.")).toBe("Childhood laughter echoes under curt light.");
     expect(cleanThought('"My father\'s coat mingled with today\'s rain."<|im_end|>')).toBe("My father's coat mingled with today's rain.");
-    expect(cleanThought("word ".repeat(200))!.length).toBeLessThanOrEqual(LIMITS.thoughtChars);
+    expect(cleanThought(Array.from({ length: 80 }, (_, i) => `lantern${i}`).join(" "))!.length).toBeLessThanOrEqual(LIMITS.thoughtChars);
     expect(cleanThought("I'm sorry, but I can't do that. Would you like me to create something else?")).toBeNull();
     // cut off by the token limit: back to the last clause, never a half word
     expect(cleanThought("A cracked teacup with frostbitten petals drifting on glass—faded sunlight through leaves, a tiny moth’s wing sil", { truncated: true })).toBe(

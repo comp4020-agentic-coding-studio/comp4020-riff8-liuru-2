@@ -117,7 +117,8 @@ export function cleanThought(raw, { truncated = false } = {}) {
   if (/^(?:here(?:'s| is)|sure|certainly)\b/iu.test(line) || REFUSAL.test(line)) return null;
   if (truncated) line = endCleanly(line);
   line = line.charAt(0).toUpperCase() + line.slice(1);
-  if (words(line).length < 3) return null;
+  // at least three content words: "I may know that it arrives" says nothing to look at
+  if (words(line).length < 3 || fingerprint(line).split(" ").length < 3) return null;
   return clip(line, LIMITS.thoughtChars);
 }
 
