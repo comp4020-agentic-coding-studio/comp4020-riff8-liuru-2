@@ -3,3 +3,10 @@
 allowBuilds:
   esbuild: true
   better-sqlite3: true
+  # its postinstall only prints a version notice; transformers.js pulls it in
+  protobufjs: false
+# transformers.js only runs in the browser here (public/js/oracle-worker.js);
+# its Node-side runtime and image library are never loaded, so don't install them.
+overrides:
+  onnxruntime-node: "-"
+  sharp: "-"

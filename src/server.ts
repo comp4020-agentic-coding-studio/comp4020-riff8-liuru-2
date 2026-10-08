@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { readFile, stat } from "node:fs/promises";
-import { readFileSync } from "node:fs";
+import { stat } from "node:fs/promises";
+import { createReadStream, readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { extname, normalize, resolve, sep } from "node:path";
+import { dirname, extname, normalize, resolve, sep } from "node:path";
 import { marked } from "marked";
 import { addTrace, isKind, recentTraces, type Trace } from "./db.ts";
 import { publicTrace, renderReadme, renderWall } from "./templates.ts";
@@ -16,16 +17,33 @@ const MAX_BODY = 16 * 1024;
 const MIME: Record<string, string> = {
   ".css": "text/css; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
+  ".mjs": "text/javascript; charset=utf-8",
+  ".wasm": "application/wasm",
   ".woff2": "font/woff2",
   ".mp3": "audio/mpeg",
   ".svg": "image/svg+xml",
   ".txt": "text/plain; charset=utf-8",
 };
 
+// The model orb's runtime runs in the visitor's browser, so its files are
+// served from the installed packages rather than copied into public/.
+const require = createRequire(import.meta.url);
+const transformersDist = dirname(require.resolve("@huggingface/transformers"));
+const ortDist = dirname(createRequire(transformersDist).resolve("onnxruntime-web"));
+
+// Cross-origin isolation lets the model run on several threads. `credentialless`
+// rather than `require-corp`, so the weights can still come from Hugging Face.
+const ISOLATION = {
+  "cross-origin-opener-policy": "same-origin",
+  "cross-origin-embedder-policy": "credentialless",
+};
+
 // URL prefix -> directory it may read from. Nothing outside these is served.
 const STATIC_ROOTS: Record<string, string> = {
   "/static/": resolve("public"),
   "/assets/": resolve("assets"),
+  "/vendor/transformers/": transformersDist,
+  "/vendor/ort/": ortDist,
 };
 
 function parseCookies(header: string | undefined): Record<string, string> {
@@ -84,16 +102,19 @@ async function serveStatic(
     try {
       // revalidate every time: a redeploy should reach open browsers at once
       const info = await stat(file);
+      if (!info.isFile()) return false;
       const etag = `"${info.size.toString(36)}-${info.mtimeMs.toString(36)}"`;
-      const headers = { etag, "cache-control": "no-cache" };
+      const headers = { etag, "cache-control": "no-cache", ...ISOLATION };
       if (req.headers["if-none-match"] === etag) {
         res.writeHead(304, headers);
         res.end();
         return true;
       }
-      const body = await readFile(file);
-      res.writeHead(200, { ...headers, "content-type": type, "content-length": body.length });
-      res.end(body);
+      // streamed, not buffered: the inference runtime is tens of megabytes
+      res.writeHead(200, { ...headers, "content-type": type, "content-length": info.size });
+      createReadStream(file)
+        .on("error", () => res.destroy())
+        .pipe(res);
       return true;
     } catch {
       return false;
@@ -128,7 +149,7 @@ const server = createServer(async (req, res) => {
 
     if (url.pathname === "/" && req.method === "GET") {
       const html = renderWall(recentTraces(), visitorId);
-      res.writeHead(200, { "content-type": "text/html; charset=utf-8", ...cookieHeader });
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8", ...ISOLATION, ...cookieHeader });
       res.end(html);
       return;
     }
