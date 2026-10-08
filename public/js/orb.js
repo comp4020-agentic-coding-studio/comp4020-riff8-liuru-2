@@ -610,7 +610,8 @@ export function createOrb(stage, { traces, onCount, onTouch }) {
     const calm = reducedMotion.matches;
     if (leaving) {
       const k = leaving.age / FEATURE_FADE;
-      draw(leaving.mo, 1 - k, calm ? 0 : k * 10);
+      // the outgoing words clear out of the way faster than the incoming ones arrive
+      draw(leaving.mo, (1 - k) ** 2, calm ? 0 : k * 18);
     }
     if (featured && shown(featured) && !(pinned || hovered)) {
       const k = cycling ? clamp(featureClock / FEATURE_FADE, 0, 1) : 1;

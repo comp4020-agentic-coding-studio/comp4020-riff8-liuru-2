@@ -360,6 +360,9 @@ export function createOracleOrb(stage, { onTouch, describe }) {
     hideTimer = setTimeout(() => {
       if (pinned || hovered) return;
       reveal.classList.remove("shown");
+      hideTimer = setTimeout(() => {
+        if (!reveal.classList.contains("shown")) reveal.replaceChildren();
+      }, 500);
     }, 1400);
   }
 
