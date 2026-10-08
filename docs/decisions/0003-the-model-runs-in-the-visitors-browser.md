@@ -20,6 +20,7 @@ All on this development machine (48 cores), 8 October 2026.
 | Same, Q8_0 GGUF | Node | 442 MB RSS; ~450 ms per line |
 | LFM2.5-230M ONNX `q4`, transformers.js 4.3.1, WebAssembly | Chrome 154 | fails to load: no CPU kernel for `GatherBlockQuantized` (the 4-bit embeddings) |
 | ONNX `q4f32` (4-bit layers, 32-bit embeddings), WebAssembly, 4 threads | Chrome 154 | 408 MB download; renderer 1.9–2.0 GB at peak while loading, 1.4 GB steady; 1.4–2.8 s per thought |
+| ONNX `q8`, WebAssembly, 4 threads | Chrome 154 | 489 MB download; renderer peak 1.56 GB; 6–13 s per thought, and in 16 generations the same line came back five times |
 | ONNX `q4`, WebGPU | Chrome 154, SwiftShader (software GPU) | 216 MB download; loads and generates; renderer 0.66 GB plus GPU process; 25–58 s per thought, which says nothing about a real GPU |
 | The deployed server image | Docker, `--memory=256m` | 44 MiB while serving and passing the spec |
 
@@ -33,7 +34,8 @@ All on this development machine (48 cores), 8 October 2026.
   is committed or served from here except the runtime's own JS and
   WebAssembly (`/vendor/`, from the installed package).
 - **Candidates, in order:** `q4` on WebGPU when the browser offers an
-  adapter, then `q4f32` on WebAssembly when the device reports at least
+  adapter, then `q4f32` on WebAssembly (over `q8`, which held less memory
+  at its peak but was three times slower and repeated itself) when the device reports at least
   4 GB (or doesn't say). Each is tried in a fresh worker, and a failed one is
   terminated before the next starts, because onnxruntime-web remembers a
   backend that failed to start and refuses the next in the same worker. An
