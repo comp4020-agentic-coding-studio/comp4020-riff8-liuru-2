@@ -112,6 +112,7 @@ export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
 
   function render(fresh = null) {
     orb.setThoughts(memory.recent, fresh);
+    root.dataset.thoughts = String(memory.recent.length);
     list.replaceChildren(
       ...[...memory.recent].reverse().map((th) => {
         const li = document.createElement("li");
@@ -153,7 +154,8 @@ export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
     worker = new Worker("/static/js/oracle-worker.js", { type: "module" });
     worker.onmessage = ({ data }) => {
       const wait = pending.get(data.id ?? "load");
-      if (data.type === "progress") setPhase("loading", { progress: data.total ? data.loaded / data.total : 0 });
+      // the big weights file only announces its size once it starts, so measure against what's expected
+      if (data.type === "progress") setPhase("loading", { progress: Math.min(1, data.loaded / Math.max(data.total, (candidate?.mb ?? 0) * 1e6)) });
       else if (wait) {
         pending.delete(data.id ?? "load");
         wait(data);

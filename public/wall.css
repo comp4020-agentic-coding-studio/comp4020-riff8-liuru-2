@@ -1390,6 +1390,12 @@ fieldset.forms legend {
   content: "touch a star to read what it imagined";
 }
 
+/* no placeholder under a glass with nothing in it yet */
+.scry[data-count="0"] .reveal:empty,
+.twin-model[data-thoughts="0"] .oracle-reveal:empty {
+  visibility: hidden;
+}
+
 .reveal.shown {
   opacity: 1;
   transform: none;
