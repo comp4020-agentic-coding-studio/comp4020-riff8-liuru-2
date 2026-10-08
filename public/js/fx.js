@@ -89,7 +89,7 @@ export function createFx(canvas) {
       lastMove = e.timeStamp;
       const pal = paletteOf(e.target);
       const n = pointerDown ? 2 : 1;
-      for (let i = 0; i < n; i++) mote(e.clientX + rand(-3, 3), e.clientY + rand(-3, 3), pal, { speed: pointerDown ? 30 : 12, r: pointerDown ? rand(1.6, 3) : rand(1, 2) });
+      for (let i = 0; i < n; i++) mote(e.clientX + rand(-3, 3), e.clientY + rand(-3, 3), pal, { speed: pointerDown ? 30 : 12, life: rand(0.7, 1.2), r: pointerDown ? rand(1.8, 3.2) : rand(1.4, 2.4) });
     },
     { passive: true },
   );
