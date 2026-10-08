@@ -42,12 +42,32 @@ someone else lets a thought go, it falls into your glass while you watch,
 without a reload. That's the whole of the co-presence: no names, no
 "someone is typing", just the sense that the ball is filling.
 
+## The second glass
+
+Beside the human orb sits a second one that holds what a small language
+model imagines from what people left. It runs
+[LFM2.5-230M](https://huggingface.co/LiquidAI/LFM2.5-230M) in your own
+browser (on the GPU where it can, otherwise the CPU), reading a few of the
+stored thoughts at a time and writing one short fragment every few seconds.
+It keeps its last eight fragments and a short note of older ones in your
+browser only, so it carries on from where it was rather than starting
+again. Its thoughts are labelled as generated everywhere they appear, and
+never stored on the wall or mixed with anyone's words. The light that
+crosses from the left glass to the right carries the colours of exactly the
+thoughts it was shown. Why it runs in the browser and not on the server,
+what was measured, and the bounds it keeps are in
+[decision record 0003](docs/decisions/0003-the-model-runs-in-the-visitors-browser.md).
+
 ## What's enforced vs. what's judged
 
 Enforced, in `spec/`: a trace needs a real kind (one of the six) and non-empty
 text capped at 240 characters, or the server silently drops it rather than
 storing garbage. Traces persist in SQLite on the app's own volume, so they
-survive a restart or a redeploy — not just the current process.
+survive a restart or a redeploy — not just the current process. The model's
+memory stays inside its bounds across hundreds of generations and repeated
+compaction, human words never enter its summary, and its loop never runs two
+generations at once; those are checked against test doubles, while the real
+model was checked by hand in Chrome, on both its GPU and CPU paths.
 
 Judged, by me now and by a reader later: whether the wall actually feels like
 the six similes it's named after, not a message board with a select box on
@@ -66,12 +86,17 @@ not oversights.
 ## Sound, type and licences
 
 Every sound except the Bubble music is synthesised in the browser with the
-Web Audio API (`public/js/audio.js`): six small palettes, one per as-if, so
-there is no third-party audio to license. Sound starts only after you touch
+Web Audio API (`public/js/audio.js`): six small palettes, one per as-if, and
+a seventh voice for the model's glass, so there is no third-party audio to
+license. Sound starts only after you touch
 the page, and the control in the corner mutes it for the session. The Bubble
 music, `assets/bubble_background_music.mp3`, was supplied with this riff's
 brief by the pod that wrote it. The hanzi are set in
 [Ma Shan Zheng](https://fonts.google.com/specimen/Ma+Shan+Zheng) and the text
 in [Cormorant Garamond](https://fonts.google.com/specimen/Cormorant+Garamond),
 both under the SIL Open Font License; the subsets and their licence texts
-are in `public/fonts/`.
+are in `public/fonts/`. The model is under the
+[LFM Open License v1.0](https://huggingface.co/LiquidAI/LFM2.5-230M-ONNX/blob/main/LICENSE);
+its weights are fetched from Hugging Face by your browser, not redistributed
+here, and the runtime is [transformers.js](https://github.com/huggingface/transformers.js)
+(Apache 2.0) with onnxruntime-web (MIT).

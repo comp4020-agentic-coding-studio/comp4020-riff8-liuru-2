@@ -264,7 +264,7 @@ export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
       const raw = await generate(prompt, CONFIG.generation);
       if (mine !== epoch) return { status: "stale" };
       const text = cleanThought(raw, { truncated: stats.outputTokens >= CONFIG.generation.maxNewTokens });
-      if (!text || isRepetitive(text, memory, humans)) {
+      if (!text || isRepetitive(text, memory, humans, prompt.mode)) {
         stats.rejected++;
         memory = skip(memory, humans);
         save();

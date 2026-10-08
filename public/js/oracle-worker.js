@@ -68,7 +68,8 @@ async function generate({ id, system, user, maxNewTokens, temperature, topP, top
       { role: "system", content: system },
       { role: "user", content: user },
     ];
-    const inputTokens = generator.tokenizer.apply_chat_template(messages, { add_generation_prompt: true, tokenize: true }).length;
+    const prompt = generator.tokenizer.apply_chat_template(messages, { add_generation_prompt: true, tokenize: false });
+    const inputTokens = generator.tokenizer.encode(prompt, { add_special_tokens: false }).length;
     const [out] = await generator(messages, {
       max_new_tokens: maxNewTokens,
       do_sample: true,

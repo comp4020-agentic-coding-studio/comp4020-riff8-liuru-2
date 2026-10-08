@@ -76,6 +76,13 @@ describe("model memory", () => {
     expect(m.summary).toMatch(/^recurring: /);
   });
 
+  it("won't keep a chat-shaped reply as its summary", () => {
+    let m = emptyMemory();
+    for (let i = 0; i < LIMITS.recent + 1; i++) m = accept(m, fakeThought(i), []);
+    expect(compact(m, "The question is what choice would you like to explore?").summary).toMatch(/^recurring: /);
+    expect(compact(m, "Lanterns, river ash and morning bells keep returning.").summary).toBe("Lanterns, river ash and morning bells keep returning.");
+  });
+
   it("keeps human words out of the summary: compaction only ever sees model thoughts", () => {
     let m = emptyMemory();
     const pool = humans(5);
@@ -149,9 +156,12 @@ describe("model memory", () => {
       "A cracked teacup hums with static.",
     );
     expect(cleanThought("An image it brings to mind: a faded photo of a cottage in golden light.")).toBe(
-      "a faded photo of a cottage in golden light.",
+      "A faded photo of a cottage in golden light.",
     );
-    expect(cleanThought("Small scene—childhood laughter echoes under curt light.")).toBe("childhood laughter echoes under curt light.");
+    expect(cleanThought('Hidden beneath ordinary noise: "The quiet holds secrets until night.')).toBe("The quiet holds secrets until night.");
+    expect(cleanThought("What it might become is silence from within the walls.")).toBe("Silence from within the walls.");
+    expect(isRepetitive("Quiet contrast between the clamor and stillness", emptyMemory(), [], "a quiet contrast between two of them")).toBe(true);
+    expect(cleanThought("Small scene—childhood laughter echoes under curt light.")).toBe("Childhood laughter echoes under curt light.");
     expect(cleanThought('"My father\'s coat mingled with today\'s rain."<|im_end|>')).toBe("My father's coat mingled with today's rain.");
     expect(cleanThought("word ".repeat(200))!.length).toBeLessThanOrEqual(LIMITS.thoughtChars);
     expect(cleanThought("I'm sorry, but I can't do that. Would you like me to create something else?")).toBeNull();

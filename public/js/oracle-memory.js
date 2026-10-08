@@ -25,11 +25,13 @@ export const LIMITS = {
 // people actually wrote instead of only riffing on itself.
 export const ANCHOR_EVERY = 4;
 
+// Concrete asks, because a model this small echoes an abstract one back as a
+// label ("Quiet contrast: …"); compared against real output on 8 Oct 2026.
 const MODES = [
-  "an image it brings to mind",
-  "a question it leaves open",
-  "a quiet contrast between two of them",
-  "what it might become once it has passed",
+  "something you could see or touch",
+  "a sound or a smell it brings back",
+  "a question nobody here has asked",
+  "where one of them might be a year from now",
   "a small scene, in the present tense",
 ];
 
@@ -104,13 +106,17 @@ export function cleanThought(raw, { truncated = false } = {}) {
   // a small model sometimes talks about the task before doing it: take what it labelled as the answer
   const labelled = lines.map((l) => l.match(/^(?:new\s+)?(?:fragment|thought)\s*[:：]\s*(.+)$/iu)?.[1]).find(Boolean);
   let line = labelled ?? lines.find((l) => !META_TALK.test(l)) ?? "";
+  // 'Hidden beneath ordinary noise: "The quiet holds…"': a label it made up, introducing the line itself
+  line = line.match(/^[^:"“]{3,48}[:：]\s*["“](.+)$/u)?.[1] ?? line;
   line = line
     .replace(/^(?:[-•\d.)\s]+)/u, "")
     .replace(MODE_ECHO, "")
+    .replace(BECOME_ECHO, "")
     .replace(/^["“”'‘’「『]+|["“”'‘’」』]+$/gu, "")
     .trim();
   if (/^(?:here(?:'s| is)|sure|certainly)\b/iu.test(line) || REFUSAL.test(line)) return null;
   if (truncated) line = endCleanly(line);
+  line = line.charAt(0).toUpperCase() + line.slice(1);
   if (words(line).length < 3) return null;
   return clip(line, LIMITS.thoughtChars);
 }
@@ -127,12 +133,14 @@ function endCleanly(line) {
 // "I'm stuck, let's craft something fresh", "Here is a fragment": talk about the task, not a thought
 const META_TALK = /\b(?:let'?s|craft|fragments?|prompt|i'?m stuck|as requested)\b/iu;
 // "An image it brings to mind: …", "Question: …": the instruction echoed back as a label
-const MODE_ECHO = /^[^:：—–]{0,48}\b(?:image|question|contrast|scene|mind|become|fragment|thought|answer|response)\b[^:：—–]{0,24}(?:[:：]|\s*[—–])\s*/iu;
+const MODE_ECHO = /^[^:：—–]{0,48}\b(?:image|question|contrast|scene|mind|become|fragment|thought|answer|response|something|sound|smell|year)\b[^:：—–]{0,24}(?:[:：]|\s*[—–])\s*/iu;
+const BECOME_ECHO = /^(?:what|where) (?:it|this|they|one of them) (?:might|may|will|could) (?:become|be)(?: (?:is|are))?[,:]?\s+/iu;
 
-/** True when a candidate says what the model, or a visitor, has already said. */
-export function isRepetitive(text, memory, humans = []) {
+/** True when a candidate says what the model, or a visitor, or its own instruction, has already said. */
+export function isRepetitive(text, memory, humans = [], mode = "") {
   const fp = fingerprint(text);
   if (!fp) return true;
+  if (mode && jaccard(fp, fingerprint(mode)) >= 0.4) return true;
   for (const old of memory.seen) if (jaccard(fp, old) >= 0.5) return true;
   // an association, not a quotation: echoing a visitor back isn't a new thought
   for (const h of humans) if (jaccard(fp, fingerprint(h.text)) >= 0.7) return true;
@@ -260,7 +268,9 @@ export function compact(memory, modelSummary) {
   const evicted = memory.recent.slice(0, LIMITS.compactBatch);
   let summary = typeof modelSummary === "string" ? modelSummary.replace(/<\|[^]*$/u, "").replace(/\s+/g, " ").trim() : "";
   summary = summary.replace(/^(?:notes?|summary|themes?)\s*[:：-]\s*/iu, "");
-  const usable = words(summary).length >= 4 && summary.length <= LIMITS.summaryChars * 1.5;
+  // a note to itself, not a question back to whoever asked: anything chat-shaped falls back
+  const chatty = /\?\s*$|\byou\b|\byour\b/iu.test(summary) || REFUSAL.test(summary) || META_TALK.test(summary);
+  const usable = !chatty && words(summary).length >= 4 && summary.length <= LIMITS.summaryChars * 1.5;
   return {
     ...memory,
     recent: memory.recent.slice(LIMITS.compactBatch),
