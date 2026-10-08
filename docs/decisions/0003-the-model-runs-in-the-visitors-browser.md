@@ -104,3 +104,15 @@ the WebAssembly path.
 
 The licence (LFM Open License v1.0) allows this use; the repo doesn't
 redistribute the weights.
+
+## Not verified
+
+Everything above ran in headless Chrome 154 on one development machine.
+Not checked: speed on a real GPU (only SwiftShader, which proves the WebGPU
+path works but says nothing about its pace); Firefox, which reports no
+device memory and would take the CPU path; Safari, which lacks credentialless
+isolation and so would run the CPU path on one thread; and any real phone.
+The out-of-memory fallbacks were exercised by simulating the failure in the
+worker, not by exhausting a real device. The next things worth trying are a
+timing run on a laptop GPU and, if the course machine ever grows, one shared
+stream on the server, so the whole room watches the same glass.
