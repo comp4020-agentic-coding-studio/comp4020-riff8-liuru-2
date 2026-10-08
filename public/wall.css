@@ -1191,8 +1191,12 @@ fieldset.forms legend {
 }
 
 .oracle {
-  cursor: default;
+  cursor: grab;
   touch-action: pan-y;
+}
+
+.oracle.dragging {
+  cursor: grabbing;
 }
 
 .oracle.over-mote {

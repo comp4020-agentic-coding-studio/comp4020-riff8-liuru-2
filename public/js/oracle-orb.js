@@ -43,6 +43,9 @@ export function createOracleOrb(stage, { onTouch, describe }) {
   let keyIndex = -1;
   let hideTimer = 0;
   let glow = 0;
+  let spin = 0; // what a drag left behind, easing back to the glass's own slow turn
+  let drag = null;
+  let dragged = false; // the click that may follow a drag isn't a click
   const pointer = { x: -1e4, y: -1e4, inside: false };
 
   function resize() {
@@ -109,7 +112,11 @@ export function createOracleOrb(stage, { onTouch, describe }) {
     t += dt;
     const calm = reducedMotion.matches;
     const still = calm || state.name === "paused" || pinned || hovered;
-    if (!still) yaw += dt * (state.name === "thinking" ? 0.12 : 0.05);
+    if (!drag) {
+      yaw += spin * dt;
+      spin = approach(spin, 0, dt, 1.2);
+      if (!still) yaw += dt * (state.name === "thinking" ? 0.12 : 0.05);
+    }
     glow = approach(glow, state.name === "thinking" ? 1 : 0, dt, 0.6);
     if (current) current.age += dt;
     if (parting && (parting.age += dt) > DISSOLVE) parting = null;
@@ -377,11 +384,43 @@ export function createOracleOrb(stage, { onTouch, describe }) {
     return [r.left + (st.sx / W) * r.width, r.top + (st.sy / W) * r.height];
   }
 
+  // dragging turns the constellation, as it turns the other glass; a tap still reads a star
+  el.addEventListener("pointerdown", (e) => {
+    const [x, y] = local(e);
+    if (Math.hypot(x - cx, y - cy) > R) return;
+    dragged = false;
+    drag = { x: e.clientX, x0: e.clientX, t: e.timeStamp, moved: false };
+    el.setPointerCapture(e.pointerId);
+  });
+  const endDrag = () => {
+    if (!drag) return;
+    el.classList.remove("dragging");
+    dragged = drag.moved;
+    drag = null;
+  };
+  el.addEventListener("pointerup", endDrag);
+  el.addEventListener("pointercancel", endDrag);
+
   el.addEventListener("pointermove", (e) => {
     const [x, y] = local(e);
     pointer.x = x;
     pointer.y = y;
     pointer.inside = Math.hypot(x - cx, y - cy) < R;
+    if (drag) {
+      const dx = e.clientX - drag.x;
+      if (Math.abs(e.clientX - drag.x0) > 6 && !drag.moved) {
+        drag.moved = true;
+        el.classList.add("dragging");
+      }
+      if (drag.moved) {
+        const k = 3.2 / W;
+        yaw += dx * k;
+        spin = (dx * k) / Math.max(0.008, (e.timeStamp - drag.t) / 1000);
+      }
+      drag.x = e.clientX;
+      drag.t = e.timeStamp;
+      return;
+    }
     if (e.pointerType !== "mouse") return;
     const st = pointer.inside ? hit(x, y) : null;
     if (st !== hovered) {
@@ -403,6 +442,10 @@ export function createOracleOrb(stage, { onTouch, describe }) {
     else hideSoon();
   });
   el.addEventListener("click", (e) => {
+    if (dragged) {
+      dragged = false;
+      return;
+    }
     const [x, y] = local(e);
     if (Math.hypot(x - cx, y - cy) > R) return;
     const st = hit(x, y, e.pointerType !== "mouse") ?? (current && Math.hypot(x - cx, y - cy) < R * 0.45 ? stars.find((s) => s.thought.id === current.thought.id) : null);
