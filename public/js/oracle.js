@@ -78,7 +78,6 @@ export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
   let announced = "";
   let started = false;
   let loop = null;
-  const stats = { kept: 0, rejected: 0, lastMs: 0, inputTokens: 0, outputTokens: 0 };
 
   // ---------------------------------------------------------------- memory, kept in this browser
 
@@ -234,6 +233,7 @@ export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
     return false;
   }
 
+  /** One request to the worker: the raw text and how many tokens it took, or a thrown error. */
   async function generate(prompt, params) {
     const id = nextId++;
     const res = await request({ type: "generate", id, system: prompt.system, user: prompt.user, ...params }, id);
@@ -242,10 +242,7 @@ export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
       err.oom = res.oom;
       throw err;
     }
-    stats.lastMs = res.ms;
-    stats.inputTokens = res.inputTokens;
-    stats.outputTokens = res.outputTokens;
-    return res.text;
+    return res;
   }
 
   // ---------------------------------------------------------------- one turn of the loop
@@ -263,7 +260,7 @@ export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
       if (needsCompaction(memory)) {
         let note;
         try {
-          note = await generate(compactionPrompt(memory), CONFIG.summary);
+          note = (await generate(compactionPrompt(memory), CONFIG.summary)).text;
         } catch (err) {
           if (err.oom) throw err;
           note = undefined; // the deterministic fallback takes over
@@ -275,19 +272,16 @@ export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
       const humans = chooseHumans(traces, memory, isAnchor(memory));
       const prompt = buildPrompt(memory, humans);
       onInspire(humans);
-      const raw = await generate(prompt, CONFIG.generation);
+      const res = await generate(prompt, CONFIG.generation);
       if (mine !== epoch) return { status: "stale" };
-      const text = cleanThought(raw, { truncated: stats.outputTokens >= CONFIG.generation.maxNewTokens });
+      const text = cleanThought(res.text, { truncated: res.outputTokens >= CONFIG.generation.maxNewTokens });
       if (!text || isRepetitive(text, memory, humans, prompt.mode)) {
-        stats.rejected++;
         memory = skip(memory, humans);
         save();
-        console.info(`[oracle] set aside: ${JSON.stringify(raw)}`);
         return { status: "resting" };
       }
       memory = accept(memory, text, humans);
       save();
-      stats.kept++;
       const thought = memory.recent.at(-1);
       render(thought);
       onThought(thought);
@@ -480,9 +474,6 @@ export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
     /** A new human comment arrived: the next generation can start now rather than wait out its rest. */
     nudge() {
       loop?.nudge();
-    },
-    get stats() {
-      return { ...stats, phase, candidate: candidate?.key, memory: { recent: memory.recent.length, summary: memory.summary.length, gen: memory.gen, compactions: memory.compactions }, loop: loop?.stats };
     },
   };
 }
