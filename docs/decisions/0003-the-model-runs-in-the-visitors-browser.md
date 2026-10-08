@@ -22,6 +22,7 @@ All on this development machine (48 cores), 8 October 2026.
 | ONNX `q4f32` (4-bit layers, 32-bit embeddings), WebAssembly, 4 threads | Chrome 154 | 408 MB download; renderer 1.9–2.0 GB at peak while loading, 1.4 GB steady; 1.4–2.8 s per thought |
 | ONNX `q8`, WebAssembly, 4 threads | Chrome 154 | 489 MB download; renderer peak 1.56 GB; 6–13 s per thought, and in 16 generations the same line came back five times |
 | ONNX `q4`, WebGPU | Chrome 154, SwiftShader (software GPU) | 216 MB download; loads and generates; renderer 0.66 GB plus GPU process; 25–58 s per thought, which says nothing about a real GPU |
+| `q4f32`, WebAssembly, an 8-minute soak | Chrome 154 | 62 generations and 11 compactions; renderer 1.6–1.86 GB with no upward trend; 568–597 DOM nodes; stored memory at most 3.5 KB |
 | The deployed server image | Docker, `--memory=256m` | 44 MiB while serving and passing the spec |
 
 ## Decision
