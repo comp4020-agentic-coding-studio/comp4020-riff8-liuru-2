@@ -132,7 +132,8 @@ function endCleanly(line) {
 }
 
 // "I'm stuck, let's craft something fresh", "Here is a fragment": talk about the task, not a thought
-const META_TALK = /\b(?:let'?s|craft|fragments?|prompt|i'?m stuck|as requested)\b/iu;
+const META_TALK =
+  /\b(?:let'?s|craft|fragments?|prompt|i'?m stuck|as requested|rules?|preferences?|requests?|context|assist|respond|instructions?)\b|\bi (?:don'?t|do not|don’t) (?:have|respond)\b/iu;
 // "An image it brings to mind: …", "Question: …": the instruction echoed back as a label
 const MODE_ECHO = /^[^:：—–]{0,48}\b(?:image|question|contrast|scene|mind|become|fragment|thought|answer|response|something|sound|smell|year)\b[^:：—–]{0,24}(?:[:：]|\s*[—–])\s*/iu;
 const BECOME_ECHO = /^(?:what|where) (?:it|this|they|one of them) (?:might|may|will|could) (?:become|be)(?: (?:is|are))?[,:]?\s+/iu;

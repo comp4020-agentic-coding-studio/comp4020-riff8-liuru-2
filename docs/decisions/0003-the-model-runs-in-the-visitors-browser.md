@@ -94,7 +94,12 @@ touch, a question nobody has asked), and in a 16-generation run with the
 real cleaning and de-duplication, 13 lines were kept: short sensory images
 such as "A faint electric hum drifting from forgotten wires through cracked
 windows", along with some that are only generic. The 3 set aside were a
-refusal, a one-word reply and a near-repeat. Each thought took 1.7–4.5 s on
+refusal, a one-word reply and a near-repeat. Two later variants did worse,
+over 12 generations each. Telling the model which of the six forms each
+fragment was left as drew more refusals and chatter (5 set aside). A cooler
+temperature of 0.65 repeated one line five times (7 set aside). Both runs
+also surfaced chatter addressed to the reader ("have you made any changes to
+the rules?"), which the cleaner now sets aside. Each thought took 1.7–4.5 s on
 the WebAssembly path.
 
 The licence (LFM Open License v1.0) allows this use; the repo doesn't

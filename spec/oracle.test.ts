@@ -168,6 +168,14 @@ describe("model memory", () => {
     expect(cleanThought("Small scene—childhood laughter echoes under curt light.")).toBe("Childhood laughter echoes under curt light.");
     expect(cleanThought('"My father\'s coat mingled with today\'s rain."<|im_end|>')).toBe("My father's coat mingled with today's rain.");
     expect(cleanThought(Array.from({ length: 80 }, (_, i) => `lantern${i}`).join(" "))!.length).toBeLessThanOrEqual(LIMITS.thoughtChars);
+    // real outputs: the assistant talking to whoever asked, not a thought
+    for (const chatter of [
+      "I wonder if you've made any changes to the rules or preferences?",
+      "I don’t respond without knowing what you meant by “the last few”—no questions allowed under context.",
+      "I don't have a sound or smell you can hear. What sounds would make you feel?",
+    ])
+      expect(cleanThought(chatter), chatter).toBeNull();
+    expect(cleanThought("Do you remember the smell of rain on hot stone?")).toBe("Do you remember the smell of rain on hot stone?");
     expect(cleanThought("I'm sorry, but I can't do that. Would you like me to create something else?")).toBeNull();
     // cut off by the token limit: back to the last clause, never a half word
     expect(cleanThought("A cracked teacup with frostbitten petals drifting on glass—faded sunlight through leaves, a tiny moth’s wing sil", { truncated: true })).toBe(
