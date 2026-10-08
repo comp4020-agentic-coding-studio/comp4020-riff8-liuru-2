@@ -9,6 +9,7 @@ import {
   compact,
   compactionPrompt,
   emptyMemory,
+  isAnchor,
   isRepetitive,
   needsCompaction,
   sanitise,
@@ -34,7 +35,7 @@ const VOCAB = "lantern river ash moth glass salt orchard ferry bell kite marrow 
 const fakeThought = (n: number) => `the ${VOCAB[n % 16]} remembers k${n}a and k${n}b by morning`;
 
 function assertBounded(m: Memory) {
-  expect(m.recent.length).toBeLessThanOrEqual(LIMITS.recent + 1);
+  expect(m.recent.length).toBeLessThanOrEqual(LIMITS.recent);
   for (const r of m.recent) expect(r.text.length).toBeLessThanOrEqual(LIMITS.thoughtChars);
   expect(m.summary.length).toBeLessThanOrEqual(LIMITS.summaryChars);
   expect(m.seen.length).toBeLessThanOrEqual(LIMITS.seen);
@@ -44,7 +45,7 @@ function assertBounded(m: Memory) {
 /** One iteration as the page runs it: compact if due, then generate and keep or skip. */
 function iterate(m: Memory, pool: Human[], gen: (n: number) => string, summarise: (m: Memory) => unknown) {
   if (needsCompaction(m)) m = compact(m, summarise(m));
-  const chosen = chooseHumans(pool, m);
+  const chosen = chooseHumans(pool, m, isAnchor(m));
   const prompt = buildPrompt(m, chosen, () => 0.5);
   expect(prompt.user.length).toBeLessThanOrEqual(LIMITS.promptChars);
   const text = cleanThought(gen(m.gen));
@@ -78,7 +79,7 @@ describe("model memory", () => {
 
   it("won't keep a chat-shaped reply as its summary", () => {
     let m = emptyMemory();
-    for (let i = 0; i < LIMITS.recent + 1; i++) m = accept(m, fakeThought(i), []);
+    for (let i = 0; i < LIMITS.recent; i++) m = accept(m, fakeThought(i), []);
     expect(compact(m, "The question is what choice would you like to explore?").summary).toMatch(/^recurring: /);
     expect(compact(m, "Lanterns, river ash and morning bells keep returning.").summary).toBe("Lanterns, river ash and morning bells keep returning.");
   });
@@ -86,7 +87,7 @@ describe("model memory", () => {
   it("keeps human words out of the summary: compaction only ever sees model thoughts", () => {
     let m = emptyMemory();
     const pool = humans(5);
-    for (let i = 0; i < LIMITS.recent + 1; i++) ({ m } = iterate(m, pool, fakeThought, () => ""));
+    for (let i = 0; i < LIMITS.recent; i++) ({ m } = iterate(m, pool, fakeThought, () => ""));
     const p = compactionPrompt(m);
     expect(p.user).not.toMatch(/visitor fragment/);
     const after = compact(m, undefined);
@@ -124,6 +125,7 @@ describe("model memory", () => {
       if (r.prompt.anchor) {
         anchors.push(i);
         expect(r.prompt.user).not.toMatch(/Your last few fragments/);
+        expect(r.chosen).toHaveLength(1);
       }
       m = r.m;
     }

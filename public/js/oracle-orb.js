@@ -408,7 +408,8 @@ export function createOracleOrb(stage, { onTouch, describe }) {
     const st = hit(x, y, e.pointerType !== "mouse") ?? (current && Math.hypot(x - cx, y - cy) < R * 0.45 ? stars.find((s) => s.thought.id === current.thought.id) : null);
     if (st) {
       pinned = st;
-      keyIndex = stars.indexOf(st);
+      // the arrow keys count newest first, so a click leaves them where it landed
+      keyIndex = [...stars].sort((p, q) => q.thought.id - p.thought.id).indexOf(st);
       show(st, { announceIt: true });
       onTouch?.(...onScreen(st));
     } else {

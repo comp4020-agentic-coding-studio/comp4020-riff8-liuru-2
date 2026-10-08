@@ -106,10 +106,10 @@ const orb = createOrb(stage, {
 
 // ---------------------------------------------------------------- the drift
 
+// one fixed label, "hold the drift", whose pressed state says whether it is held
 const cycleToggle = $(".cycle-toggle");
 function renderCycle() {
   cycleToggle.setAttribute("aria-pressed", String(!orb.cycling));
-  cycleToggle.querySelector("span").textContent = orb.cycling ? "hold the drift" : "let it drift";
 }
 cycleToggle.addEventListener("click", () => {
   orb.setCycling(!orb.cycling);
@@ -118,7 +118,7 @@ cycleToggle.addEventListener("click", () => {
 for (const button of document.querySelectorAll(".cycle-step")) {
   button.addEventListener("click", () => {
     // browsing by hand holds the drift, so what you stepped to stays to be read
-    if (orb.cycling) orb.setCycling(false);
+    if (orb.cycling) orb.setCycling(false, { pin: false });
     orb.browse(Number(button.dataset.dir));
     renderCycle();
   });

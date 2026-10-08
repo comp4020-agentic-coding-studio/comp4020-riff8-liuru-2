@@ -23,7 +23,7 @@ const BURST = 0.9; // seconds an elemental reaction lasts when a light is touche
 const FEATURE_EVERY = 1.1; // seconds each thought is held up in the glass while it cycles
 const FEATURE_FADE = 0.35;
 
-export function createOrb(stage, { traces, onCount, onTouch, onCycle }) {
+export function createOrb(stage, { traces, onCount, onTouch }) {
   const el = stage.querySelector(".orb");
   const canvas = el.querySelector("canvas");
   const ctx = canvas.getContext("2d");
@@ -125,7 +125,6 @@ export function createOrb(stage, { traces, onCount, onTouch, onCycle }) {
     leaving = featured ? { mo: featured, age: 0 } : null;
     featured = mo;
     featureClock = 0;
-    onCycle?.(mo?.trace ?? null);
   }
 
   function refreshFogMix() {
@@ -1014,9 +1013,9 @@ export function createOrb(stage, { traces, onCount, onTouch, onCycle }) {
 
   return {
     /** Turns the living display on or off; off, the glass waits to be browsed by hand. */
-    setCycling(on) {
+    setCycling(on, { pin = true } = {}) {
       cycling = on;
-      if (!on && featured && !pinned) pinAndShow(featured);
+      if (!on && pin && featured && shown(featured) && !pinned) pinAndShow(featured);
       if (on && pinned) {
         pinned = null;
         hideSoon();

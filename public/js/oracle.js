@@ -17,6 +17,7 @@ import {
   compact,
   compactionPrompt,
   emptyMemory,
+  isAnchor,
   isRepetitive,
   needsCompaction,
   sanitise,
@@ -74,6 +75,7 @@ export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
   let pending = new Map();
   let nextId = 1;
   let phase = "";
+  let announced = "";
   let started = false;
   let loop = null;
   const stats = { kept: 0, rejected: 0, lastMs: 0, inputTokens: 0, outputTokens: 0 };
@@ -141,8 +143,11 @@ export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
     status.textContent = STATUS[name](candidate ?? candidates[0], progress, why);
     orb.setState(name === "hidden" ? "paused" : name, { progress });
     root.dataset.phase = name;
-    // tell a screen reader when the phase changes, never on every percentage or every thought
-    if (name !== phase && !["thinking", "resting", "loading"].includes(name)) live.textContent = status.textContent;
+    // tell a screen reader when the phase really changes, never on every percentage, thought, or turn of the loop
+    if (name !== announced && !["thinking", "resting", "loading"].includes(name)) {
+      live.textContent = status.textContent;
+      announced = name;
+    }
     phase = name;
     toggle.hidden = !["thinking", "resting", "paused", "waiting", "retrying", "hidden"].includes(name);
     wakeButton.hidden = name !== "asleep";
@@ -202,14 +207,20 @@ export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
     return CONFIG.candidates.filter((c) => (c.device === "webgpu" ? Boolean(adapter) : !gb || gb >= (c.minMemoryGb ?? 0)));
   }
 
-  /** Loads the first candidate that works, releasing each failure before the next. */
-  async function loadModel(from = 0) {
+  /**
+   * Loads the first candidate that works, releasing each failure before the
+   * next. `mine` is the epoch it was started in: once the tab hands over, a
+   * load still in progress stops instead of carrying on with the next candidate.
+   */
+  async function loadModel(from, mine) {
     for (let i = from; i < candidates.length; i++) {
+      if (mine !== epoch) return false;
       candidate = candidates[i];
       setPhase("loading", { progress: 0 });
       kill();
       spawn();
       const res = await request({ type: "load", model: CONFIG.model, candidate }, "load");
+      if (mine !== epoch) return false;
       if (res.type === "ready") {
         engine.textContent = `${CONFIG.model.name}, ${candidate.label}`;
         console.info(`[oracle] ${CONFIG.model.name} ${candidate.key} ready in ${res.ms} ms`);
@@ -217,6 +228,7 @@ export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
       }
       console.warn(`[oracle] ${candidate.key} failed to load: ${res.message}`);
     }
+    if (mine !== epoch) return false;
     kill();
     candidate = null;
     return false;
@@ -260,7 +272,7 @@ export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
         memory = compact(memory, note);
         save();
       }
-      const humans = chooseHumans(traces, memory);
+      const humans = chooseHumans(traces, memory, isAnchor(memory));
       const prompt = buildPrompt(memory, humans);
       onInspire(humans);
       const raw = await generate(prompt, CONFIG.generation);
@@ -284,10 +296,9 @@ export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
       if (err.oom && candidate) {
         // out of memory: release this configuration and fall to the next, keeping every thought so far
         const next = candidates.indexOf(candidate) + 1;
-        epoch++;
-        if (!(await loadModel(next))) {
-          setPhase("unavailable", { why: "not enough memory for the model" });
-          loop?.stop();
+        const switching = ++epoch;
+        if (!(await loadModel(next, switching))) {
+          if (switching === epoch) giveUp("not enough memory for the model");
           return { status: "stale" };
         }
       }
@@ -303,24 +314,26 @@ export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
     const mine = ++epoch;
     candidates = await probe();
     if (!candidates.length) {
-      setPhase("unavailable", { why: "no WebGPU, and too little memory for the CPU version" });
+      giveUp("no WebGPU, and too little memory for the CPU version");
       return;
     }
-    const ok = await loadModel();
+    const ok = await loadModel(0, mine);
     if (mine !== epoch) return; // handed over while it was loading
     if (!ok) {
-      setPhase("unavailable", { why: "the model wouldn't load" });
+      giveUp("the model wouldn't load");
       return;
     }
     loop = createLoop({
       think,
       interval: CONFIG.intervalMs,
       onState(name, detail) {
-        if (name === "thinking") setPhase("thinking");
+        // a pause pressed mid-generation shows at once, not after the generation it waited for
+        if ((name === "thinking" || name === "resting") && loop?.holds.includes("paused")) setPhase("paused");
+        else if (name === "thinking") setPhase("thinking");
         else if (name === "resting") setPhase("resting");
         else if (name === "waiting") setPhase("waiting");
         else if (name === "retrying") setPhase("retrying");
-        else if (name === "failed") setPhase("unavailable", { why: String(detail?.message ?? detail).slice(0, 80) });
+        else if (name === "failed") giveUp(String(detail?.message ?? detail).slice(0, 80));
         else if (name === "held") setPhase(detail.includes("paused") ? "paused" : "hidden");
       },
     });
@@ -369,6 +382,17 @@ export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
       });
   }
 
+  /** Stops for good in this tab, says why, and lets another tab of this browser try. */
+  function giveUp(why) {
+    epoch++;
+    loop?.stop();
+    loop = null;
+    kill();
+    setPhase("unavailable", { why });
+    releaseLock?.();
+    releaseLock = null;
+  }
+
   function handOver() {
     if (!releaseLock) return;
     epoch++;
@@ -396,20 +420,22 @@ export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
     else if (woken) claim();
   });
 
+  // one fixed label, "pause its imagining", whose pressed state says whether it is paused
   toggle.addEventListener("click", () => {
     if (!loop) return;
     const pause = !loop.holds.includes("paused");
-    if (pause) loop.hold("paused");
-    else loop.release("paused");
     sessionStorage.setItem("liuru.oracle.paused", pause ? "1" : "0");
     toggle.setAttribute("aria-pressed", String(pause));
-    toggle.querySelector("span").textContent = pause ? "let it imagine again" : "pause its imagining";
-    if (pause) setPhase("paused");
+    if (pause) {
+      loop.hold("paused");
+      setPhase("paused");
+    } else {
+      loop.release("paused");
+      setPhase("resting");
+      loop.nudge();
+    }
   });
-  if (sessionStorage.getItem("liuru.oracle.paused") === "1") {
-    toggle.setAttribute("aria-pressed", "true");
-    toggle.querySelector("span").textContent = "let it imagine again";
-  }
+  if (sessionStorage.getItem("liuru.oracle.paused") === "1") toggle.setAttribute("aria-pressed", "true");
 
   wakeButton.addEventListener("click", () => {
     sessionStorage.setItem("liuru.oracle.woken", "1");

@@ -165,7 +165,7 @@ export function chooseHumans(traces, memory, anchor = false) {
   return chosen.map((t) => ({ id: t.id, kind: t.kind, text: clip(t.text, LIMITS.humanChars) }));
 }
 
-const isAnchor = (memory) => memory.gen % ANCHOR_EVERY === ANCHOR_EVERY - 1;
+export const isAnchor = (memory) => memory.gen % ANCHOR_EVERY === ANCHOR_EVERY - 1;
 
 /**
  * The user message for one generation, never longer than LIMITS.promptChars.
@@ -232,7 +232,8 @@ export function skip(memory, humans, now = Date.now()) {
   return { ...memory, gen: memory.gen + 1, cursor: memory.cursor + Math.max(1, humans.length), updatedAt: now };
 }
 
-export const needsCompaction = (memory) => memory.recent.length > LIMITS.recent;
+// folded before a turn that would otherwise take the ring past LIMITS.recent
+export const needsCompaction = (memory) => memory.recent.length >= LIMITS.recent;
 
 /** The model is asked to fold its own oldest thoughts into the summary. Human text never enters this. */
 export function compactionPrompt(memory) {
