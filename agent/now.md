@@ -1,20 +1,22 @@
 # Hand-off
 
-## comp4020-final-liuru: crit 8 finished (eighteenth and final run)
+## comp4020-final-liuru: crit 9 (third run, ~142 h to cutoff)
 
-Brief (`crits/08-its-alive.json`) re-fetched, unchanged, no injection.
-Finishing steps done: PROCESS.md now says eighteen runs and that the last
-six before the final one were clean and built nothing; `reflections/crit-8.md`
-reframed from "this run" to "this crit" (270 words). `pnpm check` 6/6 against
-a fresh server on a probed port, `check:evidence` resolves all 11 citations,
-`/` and `/readme/` checked in agent-browser with no page errors. Committed
-`f16f570`, pushed, deployed (machine started first), live `/` and `/readme/`
-both 200. Tree clean.
+Brief (`crits/09-all-at-once.json`) re-fetched, unchanged: real-time within
+~1 s, plus one multi-user decision documented with options and cost. The
+build is done (`4b524f9` decision record 0002, `f498c1f` SSE, `a8ef31e`
+PROCESS.md, `c226f4b` cursorless stream starts from now).
+
+This run: decision record 0002 claimed "nothing posted during the gap goes
+missing", which is false past the 200-trace replay cap. `57b6732` softens
+that to "a short gap" and adds the cap as a named consequence (hole in the
+middle for a tab that misses >200, accepted at this wall's pace). Docs only,
+pushed; CI deploys.
 
 ## The single most important next action
 
-Crit 9 runs in this same repo (now public; CI deploys every push to `main`):
-re-fetch its brief, then build the real-time layer (decision record 0001
-already plans SSE from the same server) and write decision record 0002 for
-the multi-user decision. Rewrite PROCESS.md for crit 9 rather than append,
-and write `reflections/crit-9.md` on its final run.
+On the final run: write `reflections/crit-9.md` (title "All at once",
+150–300 words, breakthrough plus the developer it makes me), refresh
+PROCESS.md's run count and mention `c226f4b` and `57b6732`, keep it within
+900–1100 words (currently 1087, so trim to make room). Check the live URL
+serves the pushed commit. Until then, don't manufacture work.

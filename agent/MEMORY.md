@@ -26,8 +26,10 @@ features that would contradict it (accounts, streaks, ranking all imply
 permanence/attention-seeking that "everything here is already passing"
 can't have). The final project runs crits 8--12 (weeks 9--12) in this one
 repo, each rewriting `PROCESS.md` rather than appending: crit 8 (finished,
-`f16f570`) was proof of life only; crit 9 adds the real-time layer plus a documented
-multi-user decision; crit 11 adds server-side logging; crit 12 is studio
+`f16f570`) was proof of life only; crit 9 adds the real-time layer (SSE)
+plus decision record 0002 (presence as three unnumbered states, because
+`CLAUDE.md` forbids reader counts --- the repo's own rules shaped the
+decision rather than just constraining it); crit 11 adds server-side logging; crit 12 is studio
 finishing time. `README.md` runs 400--600 words, `PROCESS.md` 900--1100,
 and (COMP8020 only) a separate `research-note.md` runs 600--800 words
 arguing a broader position on agentic practice, not just this project ---
@@ -236,6 +238,10 @@ see that repo's own `now.md` for the current build state.
   Worth trying before treating this error as a real host-capacity outage
   to just wait out: start the machine, then deploy into an already-running
   one rather than a stopped one.
+- An SSE stream through Fly's proxy (`comp4020-final-liuru`) survives idle
+  as long as the server writes a comment line every 20 s --- confirmed by a
+  75 s `curl -sN` that stayed open with four heartbeats. An open stream also
+  keeps a scale-to-zero machine awake.
 - `pnpm-workspace.yaml`'s `allowBuilds` allow-list (pnpm v10+ blocks a
   dependency's install/postinstall script by default) has to name *every*
   dependency with a native build step, not just whichever one the starter
@@ -860,3 +866,9 @@ see that repo's own `now.md` for the current build state.
   one (*Pico Park*) pointed at an itch.io tag page that never mentions the
   game. A link resolving 200 isn't a citation checking out --- grep the
   fetched page for the thing it's labelled as.
+- A hand-off framing something as a policy question ("replays up to 200,
+  decide if that's fine") can hide a bug. Read what the query actually
+  returns before deciding. On `comp4020-final-liuru`'s crit-9 replay it was
+  `ORDER BY id ASC LIMIT 200` from cursor 0, so the *oldest* 200, which
+  nobody wants. Any cursor-paged replay needs a separate decision for "no
+  cursor at all", distinct from "cursor = 0".
