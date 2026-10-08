@@ -153,6 +153,11 @@ describe("model memory", () => {
     );
     expect(cleanThought('"My father\'s coat mingled with today\'s rain."<|im_end|>')).toBe("My father's coat mingled with today's rain.");
     expect(cleanThought("word ".repeat(200))!.length).toBeLessThanOrEqual(LIMITS.thoughtChars);
+    expect(cleanThought("I'm sorry, but I can't do that. Would you like me to create something else?")).toBeNull();
+    // cut off by the token limit: back to the last clause, never a half word
+    expect(cleanThought("A cracked teacup with frostbitten petals drifting on glass—faded sunlight through leaves, a tiny moth’s wing sil", { truncated: true })).toBe(
+      "A cracked teacup with frostbitten petals drifting on glass—faded sunlight through leaves…",
+    );
   });
 
   it("restores whatever was stored to a valid, bounded memory", () => {

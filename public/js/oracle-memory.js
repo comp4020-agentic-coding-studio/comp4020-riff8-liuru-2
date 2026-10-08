@@ -93,7 +93,7 @@ function jaccard(a, b) {
  * worth keeping: empty, a refusal-shaped preamble, leaked template tokens,
  * or too short to be a fragment.
  */
-export function cleanThought(raw) {
+export function cleanThought(raw, { truncated = false } = {}) {
   if (typeof raw !== "string") return null;
   if (raw.includes("<|")) raw = raw.slice(0, raw.indexOf("<|"));
   const lines = raw
@@ -109,9 +109,19 @@ export function cleanThought(raw) {
     .replace(MODE_ECHO, "")
     .replace(/^["“”'‘’「『]+|["“”'‘’」』]+$/gu, "")
     .trim();
-  if (/^(?:here(?:'s| is)|sure|certainly|as an ai|i (?:can(?:not|'t)|am unable))/iu.test(line)) return null;
+  if (/^(?:here(?:'s| is)|sure|certainly)\b/iu.test(line) || REFUSAL.test(line)) return null;
+  if (truncated) line = endCleanly(line);
   if (words(line).length < 3) return null;
   return clip(line, LIMITS.thoughtChars);
+}
+
+const REFUSAL = /\b(?:i'?m sorry|i apologi[sz]e|i (?:can(?:not|'t|’t)|am unable|won'?t)|as an ai|would you like me)\b/iu;
+
+/** A line the token limit cut off: back to its last clause, or at least its last whole word. */
+function endCleanly(line) {
+  const stop = Math.max(...[".", "!", "?", ";", "—", ","].map((p) => line.lastIndexOf(p)));
+  if (stop > 0 && words(line.slice(0, stop)).length >= 4) return `${line.slice(0, stop).trimEnd()}${line[stop] === "," || line[stop] === "—" ? "…" : line[stop]}`;
+  return `${line.replace(/\s+\S*$/u, "")}…`;
 }
 
 // "I'm stuck, let's craft something fresh", "Here is a fragment": talk about the task, not a thought
