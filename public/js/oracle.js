@@ -298,12 +298,15 @@ export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
   async function begin() {
     if (started) return;
     started = true;
+    const mine = ++epoch;
     candidates = await probe();
     if (!candidates.length) {
       setPhase("unavailable", { why: "no WebGPU, and too little memory for the CPU version" });
       return;
     }
-    if (!(await loadModel())) {
+    const ok = await loadModel();
+    if (mine !== epoch) return; // handed over while it was loading
+    if (!ok) {
       setPhase("unavailable", { why: "the model wouldn't load" });
       return;
     }
@@ -324,26 +327,72 @@ export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
     loop.start();
   }
 
-  /** Only one tab per browser runs the model; the rest watch its thoughts arrive through storage. */
-  let claimed = false;
+  // ---------------------------------------------------------------- one generator per browser
+
+  // Only one tab per browser runs the model; the others show its thoughts as
+  // they land in storage. A tab out of sight for HAND_OVER_MS lets the model
+  // go (freeing its memory) and the lock with it; only tabs in view queue for it.
+  const HAND_OVER_MS = 30_000;
+  let woken = false;
+  let releaseLock = null;
+  let queued = null;
+  let handOverTimer = 0;
+
+  function own() {
+    begin();
+    return new Promise((done) => (releaseLock = done));
+  }
+
   function claim() {
-    if (claimed) return;
-    claimed = true;
-    if (!navigator.locks) return begin();
-    navigator.locks.request("liuru-oracle", { ifAvailable: true }, async (lock) => {
-      if (!lock) {
-        setPhase("elsewhere");
-        // when that tab closes, this one takes over
-        navigator.locks.request("liuru-oracle", () => {
-          begin();
-          return new Promise(() => {});
-        });
-        return;
-      }
-      begin();
-      return new Promise(() => {}); // held for the life of the page
+    woken = true;
+    if (releaseLock || queued || started) return;
+    if (!navigator.locks) return void begin();
+    navigator.locks.request("liuru-oracle", { ifAvailable: true }, (lock) => {
+      if (lock) return own();
+      setPhase("elsewhere");
+      if (!document.hidden) queue();
     });
   }
+
+  function queue() {
+    if (queued || releaseLock) return;
+    queued = new AbortController();
+    navigator.locks
+      .request("liuru-oracle", { signal: queued.signal }, () => {
+        queued = null;
+        return own();
+      })
+      .catch(() => {
+        // stopped waiting because this tab went out of sight
+      });
+  }
+
+  function handOver() {
+    if (!releaseLock) return;
+    epoch++;
+    loop?.stop();
+    loop = null;
+    kill();
+    candidate = null;
+    started = false;
+    const done = releaseLock;
+    releaseLock = null;
+    done();
+    setPhase("hidden");
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      loop?.hold("hidden");
+      queued?.abort();
+      queued = null;
+      if (releaseLock) handOverTimer = setTimeout(handOver, HAND_OVER_MS);
+      return;
+    }
+    clearTimeout(handOverTimer);
+    if (loop) loop.release("hidden");
+    else if (woken) claim();
+  });
 
   toggle.addEventListener("click", () => {
     if (!loop) return;
@@ -359,12 +408,6 @@ export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
     toggle.setAttribute("aria-pressed", "true");
     toggle.querySelector("span").textContent = "let it imagine again";
   }
-
-  document.addEventListener("visibilitychange", () => {
-    if (!loop) return;
-    if (document.hidden) loop.hold("hidden");
-    else loop.release("hidden");
-  });
 
   wakeButton.addEventListener("click", () => {
     sessionStorage.setItem("liuru.oracle.woken", "1");
