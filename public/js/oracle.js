@@ -144,9 +144,15 @@ export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
     root.dataset.phase = name;
     // tell a screen reader when the phase really changes, never on every percentage, thought, or turn of the loop
     if (name !== announced && !["thinking", "resting", "loading"].includes(name)) {
-      live.textContent = status.textContent;
+      // cleared first, so a message that comes back word for word is still read again
+      const message = status.textContent;
+      live.textContent = "";
+      requestAnimationFrame(() => (live.textContent = message));
       announced = name;
     }
+    // a finished generation means whatever was announced is over: the next pause or failure is news again
+    // (an empty wall's turns never get here, so its "waiting" is said once)
+    if (name === "resting") announced = "";
     phase = name;
     toggle.hidden = !["thinking", "resting", "paused", "waiting", "retrying", "hidden"].includes(name);
     wakeButton.hidden = name !== "asleep";
@@ -425,7 +431,8 @@ export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
       setPhase("paused");
     } else {
       loop.release("paused");
-      setPhase("resting");
+      // resumed mid-generation, it is still imagining; otherwise it starts again now
+      setPhase(loop.stats.inFlight ? "thinking" : "resting");
       loop.nudge();
     }
   });
