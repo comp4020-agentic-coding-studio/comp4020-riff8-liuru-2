@@ -151,6 +151,7 @@ describe("model memory", () => {
     expect(cleanThought("An image it brings to mind: a faded photo of a cottage in golden light.")).toBe(
       "a faded photo of a cottage in golden light.",
     );
+    expect(cleanThought("Small scene—childhood laughter echoes under curt light.")).toBe("childhood laughter echoes under curt light.");
     expect(cleanThought('"My father\'s coat mingled with today\'s rain."<|im_end|>')).toBe("My father's coat mingled with today's rain.");
     expect(cleanThought("word ".repeat(200))!.length).toBeLessThanOrEqual(LIMITS.thoughtChars);
     expect(cleanThought("I'm sorry, but I can't do that. Would you like me to create something else?")).toBeNull();

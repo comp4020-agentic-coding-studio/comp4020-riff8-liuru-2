@@ -127,7 +127,7 @@ function endCleanly(line) {
 // "I'm stuck, let's craft something fresh", "Here is a fragment": talk about the task, not a thought
 const META_TALK = /\b(?:let'?s|craft|fragments?|prompt|i'?m stuck|as requested)\b/iu;
 // "An image it brings to mind: …", "Question: …": the instruction echoed back as a label
-const MODE_ECHO = /^[^:：]{0,48}\b(?:image|question|contrast|scene|mind|become|fragment|thought|answer|response)\b[^:：]{0,24}[:：]\s*/iu;
+const MODE_ECHO = /^[^:：—–]{0,48}\b(?:image|question|contrast|scene|mind|become|fragment|thought|answer|response)\b[^:：—–]{0,24}(?:[:：]|\s*[—–])\s*/iu;
 
 /** True when a candidate says what the model, or a visitor, has already said. */
 export function isRepetitive(text, memory, humans = []) {

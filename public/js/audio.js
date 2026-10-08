@@ -224,6 +224,15 @@ const zap = (at = 0, gain = 0.05) => {
 const PENTA = [587.3, 659.3, 740, 880, 987.8, 1174.7, 1318.5];
 
 const RECIPES = {
+  // the model's glass is none of the six, so it has a voice of its own: a high
+  // glass partial and its fifth, far back in the reverb, from the right where it sits
+  oracle: {
+    touch: () => {
+      const f = [1046.5, 1174.7, 1318.5, 1568][Math.floor(rand(0, 4))];
+      tone(f, { attack: 0.01, decay: 1.8, gain: 0.028, pan: 0.45, send: 0.9 });
+      tone(f * 1.5, { at: 0.04, attack: 0.02, decay: 1.3, gain: 0.014, pan: 0.6, send: 0.9 });
+    },
+  },
   dream: {
     hover: () => bell(PENTA[Math.floor(rand(3, 7))], 0, 0.045, rand(-0.4, 0.4)),
     touch: () => bell(PENTA[Math.floor(rand(2, 7))], 0, 0.035, rand(-0.5, 0.5)),

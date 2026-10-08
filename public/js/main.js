@@ -128,7 +128,10 @@ renderCycle();
 // ---------------------------------------------------------------- the second glass
 
 const oracleOrb = createOracleOrb($(".oracle-stage"), {
-  onTouch: (x, y) => fx.glint(x, y, 5),
+  onTouch(x, y) {
+    fx.glint(x, y, 5);
+    audio.play("oracle", "touch", 0.15);
+  },
   describe: (th) => oracle.describe(th),
 });
 const oracle = createOracle({
