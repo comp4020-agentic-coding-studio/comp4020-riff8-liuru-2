@@ -301,6 +301,15 @@ Treat this as an engineering decision, not a request for user approval. Document
 
 Generous development time and cost allowances do not require an oversized deployed model or permission to add unapproved paid infrastructure. When the deployment target cannot be tested, state that limitation and distinguish estimates from measurements rather than claiming the choice is verified.
 
+## The current selection, and re-checking it
+
+The model runs in the visitor's browser, not on the 256 MB server: `docs/decisions/0003-*` has the measurements. `CONFIG` in `public/js/oracle.js` holds the model, revision, candidates and generation settings; `LIMITS` in `public/js/oracle-memory.js` holds the memory bounds. `pnpm check` covers memory and scheduling with test doubles only, so re-run real inference by hand in `agent-browser` after any change to the model, the prompt or the worker:
+
+- add `--enable-unsafe-webgpu,--use-webgpu-adapter=swiftshader,--enable-features=Vulkan` to `--no-sandbox` to exercise the WebGPU path; a software GPU proves it works, not how fast it is
+- each origin (each port) caches the weights separately, so a new port downloads 216–408 MB again
+- fake a small device or a touch screen with an `--init-script` that overrides `navigator.deviceMemory` or `matchMedia("(pointer: coarse)")`; an `eval` after load runs too late
+- judge a prompt change by a batch of real outputs through `cleanThought` and `isRepetitive`, never by reading the prompt: this model echoes abstract instructions back as labels
+
 ---
 
 # Responsive Design
