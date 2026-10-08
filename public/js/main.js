@@ -5,6 +5,9 @@ import { createAmbient } from "./ambient.js";
 import * as audio from "./audio.js";
 import { initCards } from "./cards.js";
 import { KINDS, META } from "./kinds.js";
+import { createFx } from "./fx.js";
+import { createOracle } from "./oracle.js";
+import { createOracleOrb } from "./oracle-orb.js";
 import { createOrb } from "./orb.js";
 import { startRelease } from "./release.js";
 import { reducedMotion, relativeTime } from "./util.js";
@@ -36,6 +39,8 @@ const traces = [...wall.querySelectorAll("li.trace")].map((li) => ({
   mine: li.hasAttribute("data-mine"),
 }));
 const known = new Set(traces.map((t) => t.id));
+// what the model may read: only ever the stored human thoughts this page has seen
+const everyone = [...traces];
 
 function ledgerItem(t) {
   const m = META[t.kind];
@@ -83,17 +88,61 @@ setInterval(() => {
 // ---------------------------------------------------------------- the world
 
 const ambient = createAmbient($("canvas.ambient"));
+const fx = createFx($("canvas.fx"));
 
 stage.hidden = false;
 ledger.open = false;
 
 const orb = createOrb(stage, {
   traces,
+  onTouch: (x, y, kind) => fx.burst(x, y, kind, 10),
   onCount(n) {
     scry.dataset.count = n;
     $(".scry-count").textContent =
       n === 0 ? "Nothing has passed through yet." : `${n === 1 ? "One thought" : `${n} thoughts`}, held for a while.`;
     $(".kinds-legend").hidden = n === 0;
+  },
+});
+
+// ---------------------------------------------------------------- the drift
+
+const cycleToggle = $(".cycle-toggle");
+function renderCycle() {
+  cycleToggle.setAttribute("aria-pressed", String(!orb.cycling));
+  cycleToggle.querySelector("span").textContent = orb.cycling ? "hold the drift" : "let it drift";
+}
+cycleToggle.addEventListener("click", () => {
+  orb.setCycling(!orb.cycling);
+  renderCycle();
+});
+for (const button of document.querySelectorAll(".cycle-step")) {
+  button.addEventListener("click", () => {
+    // browsing by hand holds the drift, so what you stepped to stays to be read
+    if (orb.cycling) orb.setCycling(false);
+    orb.browse(Number(button.dataset.dir));
+    renderCycle();
+  });
+}
+renderCycle();
+
+// ---------------------------------------------------------------- the second glass
+
+const oracleOrb = createOracleOrb($(".oracle-stage"), {
+  onTouch: (x, y) => fx.glint(x, y, 5),
+  describe: (th) => oracle.describe(th),
+});
+const oracle = createOracle({
+  root: $(".twin-model"),
+  orb: oracleOrb,
+  getTraces: () => everyone,
+  // the light that crosses between the glasses carries the colours of exactly the thoughts the model was shown
+  onInspire(humans) {
+    const read = orb.inspire(humans.map((h) => h.id));
+    fx.strand(() => orb.centre(), () => oracleOrb.centre(), read.map((r) => META[r.kind].a));
+  },
+  onThought() {
+    const [x, y] = oracleOrb.centre();
+    fx.glint(x, y, 8);
   },
 });
 
@@ -284,6 +333,10 @@ form.addEventListener("submit", async (e) => {
     orb.only(null);
   }
   orb.receive(trace);
+  everyone.push(trace);
+  oracle.nudge();
+  const [ox, oy] = orb.centre();
+  fx.burst(ox, oy, kind, 22);
   ambient.flash(META[kind].a);
   addToLedger(trace);
 
@@ -309,7 +362,10 @@ $(".again").addEventListener("click", () => {
 function arrive(t) {
   if (known.has(t.id)) return;
   known.add(t.id);
-  if (orb.arriveFromElsewhere(t)) addToLedger(t);
+  if (!orb.arriveFromElsewhere(t)) return;
+  addToLedger(t);
+  everyone.push(t);
+  oracle.nudge();
 }
 
 function flushHeld() {

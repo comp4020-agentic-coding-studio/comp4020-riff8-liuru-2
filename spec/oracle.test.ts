@@ -138,6 +138,9 @@ describe("model memory", () => {
     m = accept(m, "the lantern sways over the black river", []);
     expect(isRepetitive("The lantern sways over the black river!", m)).toBe(true);
     expect(isRepetitive("a moth circles the porch light", m)).toBe(false);
+    // two lines the model really did produce back to back, in different words
+    const m2 = accept(emptyMemory(), "A young person stands before a wooden table, staring blankly at a chalkboard full of numbers outside.", []);
+    expect(isRepetitive("I stand before a wooden table, staring blankly at the chalkboard filled with numbers outside.", m2)).toBe(true);
     const visitor = [{ id: 1, kind: "dew", text: "wet grass on the walk to the 8am lecture" }];
     expect(isRepetitive("Wet grass on the walk to the 8am lecture.", m, visitor)).toBe(true);
     expect(cleanThought("")).toBeNull();

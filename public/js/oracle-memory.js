@@ -71,9 +71,12 @@ export function clip(s, max) {
   return `${(space > max * 0.6 ? cut.slice(0, space) : cut).replace(/[\s,;:–—-]+$/u, "")}…`;
 }
 
+// crude stemming, enough that "stands" and "stand", "filled" and "fill" count as one word
+const stem = (w) => (w.length > 4 ? w.replace(/(?:ing|ed|es|s)$/u, "") : w);
+
 /** The content words of a line, for comparing two lines' substance rather than their spelling. */
 export function fingerprint(s) {
-  return [...new Set(words(s).filter((w) => w.length > 2 && !STOP.has(w)))].sort().join(" ");
+  return [...new Set(words(s).filter((w) => w.length > 2 && !STOP.has(w)).map(stem))].sort().join(" ");
 }
 
 function jaccard(a, b) {
@@ -120,7 +123,7 @@ const MODE_ECHO = /^[^:：]{0,48}\b(?:image|question|contrast|scene|mind|become|
 export function isRepetitive(text, memory, humans = []) {
   const fp = fingerprint(text);
   if (!fp) return true;
-  for (const old of memory.seen) if (jaccard(fp, old) >= 0.6) return true;
+  for (const old of memory.seen) if (jaccard(fp, old) >= 0.5) return true;
   // an association, not a quotation: echoing a visitor back isn't a new thought
   for (const h of humans) if (jaccard(fp, fingerprint(h.text)) >= 0.7) return true;
   return false;

@@ -20,8 +20,10 @@ import {
 
 const FRAGMENTS = 5; // how many front-most thoughts show a sliver of their words
 const BURST = 0.9; // seconds an elemental reaction lasts when a light is touched
+const FEATURE_EVERY = 1.1; // seconds each thought is held up in the glass while it cycles
+const FEATURE_FADE = 0.35;
 
-export function createOrb(stage, { traces, onCount }) {
+export function createOrb(stage, { traces, onCount, onTouch, onCycle }) {
   const el = stage.querySelector(".orb");
   const canvas = el.querySelector("canvas");
   const ctx = canvas.getContext("2d");
@@ -53,6 +55,14 @@ export function createOrb(stage, { traces, onCount }) {
   let fogMix = [];
   let only = null; // when set, the glass shows one kind and dims the rest
   const shown = (mo) => !only || mo.trace.kind === only;
+  // the living display: one thought at a time rises to the front of the glass, in a fair shuffled order
+  let cycling = !reducedMotion.matches;
+  let featured = null;
+  let leaving = null;
+  let featureClock = 0;
+  let order = [];
+  let orderPos = 0;
+  let featureBox = null;
 
   const makeMote = (trace, i, n) => {
     // spread evenly through the ball (a Fibonacci sphere), then jitter so it reads as weather, not a lattice
@@ -75,13 +85,48 @@ export function createOrb(stage, { traces, onCount }) {
       burst: null,
       trail: [],
       fresh: 0,
+      feature: 0,
+      inspired: 0,
     };
   };
 
   const setTraces = (list) => {
     motes = list.map((tr, i) => makeMote(tr, i, list.length));
+    order = [];
     refreshFogMix();
   };
+
+  function shuffle(xs) {
+    for (let i = xs.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [xs[i], xs[j]] = [xs[j], xs[i]];
+    }
+    return xs;
+  }
+
+  /** The next thought in the cycle: every one gets its turn before any repeats. */
+  function nextInOrder(dir = 1) {
+    const candidates = motes.filter(shown);
+    if (!candidates.length) return null;
+    order = order.filter((mo) => motes.includes(mo));
+    if (order.length !== motes.length) {
+      const missing = motes.filter((mo) => !order.includes(mo));
+      order.splice(orderPos, 0, ...shuffle(missing));
+    }
+    for (let i = 0; i < order.length; i++) {
+      orderPos = (orderPos + dir + order.length) % order.length;
+      if (shown(order[orderPos])) return order[orderPos];
+    }
+    return null;
+  }
+
+  function feature(mo) {
+    if (mo === featured) return;
+    leaving = featured ? { mo: featured, age: 0 } : null;
+    featured = mo;
+    featureClock = 0;
+    onCycle?.(mo?.trace ?? null);
+  }
 
   function refreshFogMix() {
     const counts = Object.fromEntries(Object.keys(META).map((k) => [k, 0]));
@@ -144,6 +189,13 @@ export function createOrb(stage, { traces, onCount }) {
     pointer.sx = approach(pointer.sx, pointer.inside ? pointer.x : cx, dt, 0.4);
     pointer.sy = approach(pointer.sy, pointer.inside ? pointer.y : cy - R * 0.4, dt, 0.4);
     pulse = approach(pulse, 0, dt, 0.7);
+
+    if (cycling && !pinned && !hovered && !drag) {
+      featureClock += dt;
+      if (!featured || featureClock >= FEATURE_EVERY) feature(nextInOrder());
+    }
+    if (leaving && (leaving.age += dt) > FEATURE_FADE) leaving = null;
+    if (featured && !motes.includes(featured)) featured = null;
 
     for (const mo of motes) {
       const kind = mo.trace.kind;
@@ -215,6 +267,8 @@ export function createOrb(stage, { traces, onCount }) {
         if (mo.burst > BURST) mo.burst = null;
       }
       mo.fresh = Math.max(0, mo.fresh - dt);
+      mo.feature = approach(mo.feature, mo === featured && shown(mo) ? 1 : 0, dt, 0.12);
+      mo.inspired = Math.max(0, mo.inspired - dt);
     }
     ripples = ripples.filter((rp) => (rp.age += dt) < rp.life);
     streaks = streaks.filter((st) => (st.age += dt) < st.life);
@@ -277,6 +331,21 @@ export function createOrb(stage, { traces, onCount }) {
     const size = (3 + depth * 3.4) * (1 + hot * 0.9 + Math.min(1, mo.fresh) * 0.3) * (W / 800 + 0.3) * crowd;
     const b = mo.burst !== null && mo.burst >= 0 ? mo.burst / BURST : -1;
 
+    if (mo.feature > 0.02) {
+      const r = size * (5 + 2 * mo.feature);
+      ctx.globalAlpha = 0.45 * mo.feature;
+      ctx.drawImage(glowSprite(m.a, 64), sx - r, sy - r, r * 2, r * 2);
+      ctx.globalAlpha = 1;
+    }
+    if (mo.inspired > 0) {
+      // the model is reading this one right now
+      const k = mo.inspired / 2.4;
+      ctx.strokeStyle = rgba([240, 210, 150], 0.7 * k);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(sx, sy, size * (3 + (1 - k) * 4), 0, TAU);
+      ctx.stroke();
+    }
     if (mo.trace.mine) {
       ctx.strokeStyle = rgba(m.a, 0.35 * a);
       ctx.lineWidth = 1;
@@ -471,7 +540,7 @@ export function createOrb(stage, { traces, onCount }) {
 
   function drawFragments(sorted) {
     // the nearest few thoughts show a sliver of their words, bent by the glass
-    const front = sorted.filter((mo) => mo.z > 0.35 && mo !== hovered && mo !== pinned).slice(-FRAGMENTS);
+    const front = sorted.filter((mo) => mo.z > 0.35 && mo !== hovered && mo !== pinned && mo !== featured).slice(-FRAGMENTS);
     ctx.textBaseline = "middle";
     for (const mo of front) {
       const words = mo.trace.text.length > 24 ? `${mo.trace.text.slice(0, 22).trimEnd()}…` : mo.trace.text;
@@ -484,6 +553,69 @@ export function createOrb(stage, { traces, onCount }) {
       ctx.fillStyle = rgba(mixRgb([236, 230, 245], mo.m.a, 0.3), 0.18 + (mo.z - 0.35) * 0.9);
       ctx.fillText(words, 0, 0);
       ctx.restore();
+    }
+  }
+
+  /** Wraps text to at most `lines` lines of `width`, ending in an ellipsis if it had to stop early. */
+  function wrap(text, width, lines) {
+    const out = [];
+    let line = "";
+    for (const word of text.split(/\s+/)) {
+      const next = line ? `${line} ${word}` : word;
+      if (ctx.measureText(next).width <= width || !line) line = next;
+      else {
+        out.push(line);
+        line = word;
+        if (out.length === lines) break;
+      }
+    }
+    if (out.length < lines && line) out.push(line);
+    else if (line && out.length === lines) out[lines - 1] = `${out[lines - 1].replace(/[\s,.;:]+$/, "")}…`;
+    while (out.length && ctx.measureText(out.at(-1)).width > width * 1.15) out[out.length - 1] = `${out.at(-1).slice(0, -2)}…`;
+    return out;
+  }
+
+  /** The thought currently held up in the glass, and the one it is giving way to. */
+  function drawFeatured() {
+    featureBox = null;
+    const draw = (mo, alpha, rise) => {
+      if (!mo || alpha <= 0.01) return;
+      const size = clamp(R * 0.07, 15, 24);
+      ctx.font = `italic 500 ${Math.round(size)}px "Cormorant Garamond", serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      const lines = wrap(mo.trace.text, R * 1.2, 3);
+      const lh = size * 1.18;
+      const top = cy + R * 0.38 - ((lines.length - 1) * lh) / 2 - rise;
+      // a pool of darkness behind the words, so they read over whatever weather is in the glass
+      const back = ctx.createRadialGradient(cx, top + ((lines.length - 1) * lh) / 2, 0, cx, top + ((lines.length - 1) * lh) / 2, R * 0.72);
+      back.addColorStop(0, `rgba(6,4,14,${0.62 * alpha})`);
+      back.addColorStop(1, "rgba(6,4,14,0)");
+      ctx.fillStyle = back;
+      ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
+      ctx.fillStyle = rgba(mixRgb([244, 240, 250], mo.m.a, 0.22), alpha);
+      lines.forEach((l, i) => ctx.fillText(l, cx, top + i * lh));
+      ctx.font = `${Math.round(size * 0.95)}px "Ma Shan Zheng", serif`;
+      ctx.fillStyle = rgba(mo.m.a, alpha * 0.9);
+      ctx.fillText(mo.m.hanzi, cx, top - lh * 1.05);
+      // a hair of light from the thought's own mote to its words
+      ctx.strokeStyle = rgba(mo.m.a, 0.28 * alpha);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(mo.sx, mo.sy);
+      ctx.quadraticCurveTo((mo.sx + cx) / 2, Math.min(mo.sy, top - lh * 1.6) - 10, cx, top - lh * 1.6);
+      ctx.stroke();
+      ctx.textAlign = "start";
+      if (mo === featured) featureBox = { x0: cx - R * 0.65, x1: cx + R * 0.65, y0: top - lh * 1.6, y1: top + lines.length * lh };
+    };
+    const calm = reducedMotion.matches;
+    if (leaving) {
+      const k = leaving.age / FEATURE_FADE;
+      draw(leaving.mo, 1 - k, calm ? 0 : k * 10);
+    }
+    if (featured && shown(featured) && !(pinned || hovered)) {
+      const k = cycling ? clamp(featureClock / FEATURE_FADE, 0, 1) : 1;
+      draw(featured, k, calm ? 0 : (1 - k) * -8);
     }
   }
 
@@ -581,6 +713,7 @@ export function createOrb(stage, { traces, onCount }) {
       }
     }
     drawFragments(sorted.filter(shown));
+    drawFeatured();
 
     if (!motes.length) {
       ctx.fillStyle = "rgba(236,230,245,0.55)";
@@ -680,9 +813,16 @@ export function createOrb(stage, { traces, onCount }) {
     }, 1400);
   }
 
+  /** Where a mote is, in viewport coordinates. */
+  function onScreen(mo) {
+    const r = canvas.getBoundingClientRect();
+    return [r.left + (mo.sx / W) * r.width, r.top + (mo.sy / W) * r.height];
+  }
+
   function touch(mo) {
     if (!reducedMotion.matches) mo.burst = 0;
     audio.play(mo.trace.kind, "touch", 0.12);
+    onTouch?.(...onScreen(mo), mo.trace.kind);
   }
 
   function hit(x, y, finger = false) {
@@ -778,7 +918,8 @@ export function createOrb(stage, { traces, onCount }) {
     const [x, y] = local(e);
     pointer.x = x;
     pointer.y = y;
-    const mo = hit(x, y, e.pointerType !== "mouse");
+    const onWords = featureBox && featured && x > featureBox.x0 && x < featureBox.x1 && y > featureBox.y0 && y < featureBox.y1;
+    const mo = hit(x, y, e.pointerType !== "mouse") ?? (onWords ? featured : null);
     if (mo) {
       pinned = mo;
       keyIndex = motes.indexOf(mo);
@@ -862,7 +1003,42 @@ export function createOrb(stage, { traces, onCount }) {
     }
   }, 30_000);
 
+  /** Holds a thought still and reads it out: the manual way through the cycle. */
+  function pinAndShow(mo) {
+    pinned = mo;
+    keyIndex = motes.indexOf(mo);
+    face(mo);
+    touch(mo);
+    show(mo, { announceIt: true });
+  }
+
   return {
+    /** Turns the living display on or off; off, the glass waits to be browsed by hand. */
+    setCycling(on) {
+      cycling = on;
+      if (!on && featured && !pinned) pinAndShow(featured);
+      if (on && pinned) {
+        pinned = null;
+        hideSoon();
+      }
+      featureClock = 0;
+    },
+    get cycling() {
+      return cycling;
+    },
+    /** One step through the cycle by hand (dir 1 or -1); it stays until let go or stepped again. */
+    browse(dir) {
+      const mo = nextInOrder(dir);
+      if (!mo) return;
+      feature(mo);
+      pinAndShow(mo);
+    },
+    /** Marks the thoughts the model is reading now; returns a function giving each one's live position. */
+    inspire(ids) {
+      const chosen = motes.filter((mo) => ids.includes(mo.trace.id));
+      chosen.forEach((mo) => (mo.inspired = 2.4));
+      return chosen.map((mo) => ({ kind: mo.trace.kind, at: () => onScreen(mo) }));
+    },
     /** Shows only one kind of thought (or all, given null); the rest dim to points. */
     only(kind) {
       only = kind;
@@ -900,6 +1076,7 @@ export function createOrb(stage, { traces, onCount }) {
       mo.v = inv([rand(-0.12, 0.12), rand(-0.1, 0.1), 0.62]);
       mo.fresh = 8;
       motes.unshift(mo);
+      order.splice(orderPos + 1, 0, mo);
       refreshFogMix();
       pulse = 1;
       pulseRgb = mo.m.a;
@@ -920,6 +1097,8 @@ export function createOrb(stage, { traces, onCount }) {
       const mo = makeMote(trace, Math.floor(rand(0, 20)), 20);
       mo.fresh = 5;
       motes.unshift(mo);
+      // someone else's new thought is the next one the glass holds up
+      order.splice(orderPos + 1, 0, mo);
       if (keyIndex >= 0) keyIndex++;
       refreshFogMix();
       if (!reducedMotion.matches) {
