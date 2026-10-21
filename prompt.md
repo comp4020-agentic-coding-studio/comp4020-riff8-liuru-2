@@ -64,3 +64,11 @@ Verify locally with two independent browser sessions: posting and replying updat
 Check narrow mobile layouts, keyboard operation, reduced motion, long text, empty filters, and model-loading failure/cancellation. Use local test data for mutation tests.
 
 Implement and verify the changes rather than stopping at a proposal. Keep changes scoped and avoid unnecessary dependencies. Deliver a concise summary, screenshots of the main improvements, tests actually run, and any remaining limitations. Prepare the work for review without deploying to production.
+
+Priorities, constraints and handoff
+
+- If time runs short, finish in this order: 3 (idempotent posting and reconnect recovery), 2 (replies), 4 (AI orb activation), 1 (reading polish). A smaller set that works and is tested beats all four half-done.
+- This prompt governs where it differs from C9-RIFF8_OPTIMISATION_PROMPT.md. Delete that file once replies are implemented.
+- Keep the model, revision and quantization as they are. Section 4 is about when the model loads, not which model.
+- Replies change what the app is. Update README.md so its definition of good covers them (400–600 words, every heading still served at /readme/), and keep spec/ and CLAUDE.md agreeing with it. Keep spec/invariants.test.ts green.
+- Commit on main, not a branch or PR, so the pod's live site shows the result. "Without deploying" means don't run flyctl yourself; CI deploys after the harness pushes.
