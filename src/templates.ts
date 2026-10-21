@@ -246,6 +246,7 @@ export function renderWall(traces: Trace[], replies: Reply[], cursor: string, vi
 
             <div class="release">
               <button type="submit" class="let-go"><span class="let-go-text">let it go</span></button>
+              <a class="release-read whisper" href="#scry">or read what others let go <span aria-hidden="true">↓</span></a>
               <p class="status" role="status"></p>
             </div>
           </form>

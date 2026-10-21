@@ -806,7 +806,7 @@ export function createOrb(stage, { traces, onCount, onTouch, onShow, onHold }) {
     kind.append(name, whenWrap);
     head.append(hz, kind);
     const text = document.createElement("p");
-    text.className = "reveal-text";
+    text.className = `reveal-text${tr.text.length > 120 ? " long" : ""}`;
     text.textContent = tr.text;
     reveal.append(head, text);
     if (tr.mine) {

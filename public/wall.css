@@ -932,6 +932,29 @@ fieldset.forms legend {
   flex-wrap: wrap;
   gap: 1rem 2rem;
   align-items: center;
+  margin-top: calc(clamp(2.5rem, 5vh, 4rem) * -0.45);
+}
+
+.release-read {
+  margin: 0;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+.release-read:hover {
+  color: var(--paper);
+}
+
+.release-read span {
+  display: inline-block;
+  color: var(--k-a);
+  font-style: normal;
+  transition: transform 0.3s var(--ease-out);
+}
+
+.release-read:hover span {
+  transform: translateY(3px);
 }
 
 .let-go {
@@ -1444,6 +1467,12 @@ fieldset.forms legend {
   font-size: 1.4rem;
   line-height: 1.38;
   overflow-wrap: anywhere;
+}
+
+/* a long thought steps down a size, so the panel grows less and still reads at a glance */
+.reveal-text.long {
+  font-size: 1.2rem;
+  line-height: 1.42;
 }
 
 .reveal-mine {
@@ -2354,6 +2383,10 @@ li.reply .when {
   .let-go {
     width: 100%;
     padding: 0.7rem 1rem 0.8rem;
+  }
+
+  .release-read {
+    display: none;
   }
 
   .status {
