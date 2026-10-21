@@ -134,3 +134,9 @@ it("broadcasts a reply to every open page, with the request id that lets its sen
   expect(received).toContain(request);
   expect(occurrences(received, text)).toBe(1);
 });
+
+it("tells a page whose cursor is ahead of the wall (its data was reset) to fetch a fresh snapshot", async () => {
+  const res = await readStream("/events?since=999999999.999999999", (s) => s.includes("event: synced") || s.includes("event: reset"));
+  expect(res).toContain("event: reset");
+  expect(res).not.toContain("event: synced");
+});

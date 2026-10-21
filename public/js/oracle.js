@@ -432,6 +432,8 @@ export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
     release();
     woken = false;
     sessionStorage.removeItem("liuru.oracle.woken");
+    // stopped stays stopped for this tab's session, even with the weights cached
+    sessionStorage.setItem("liuru.oracle.stopped", "1");
     setPhase("stopped");
   }
 
@@ -474,6 +476,7 @@ export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
 
   wakeButton.addEventListener("click", () => {
     sessionStorage.setItem("liuru.oracle.woken", "1");
+    sessionStorage.removeItem("liuru.oracle.stopped");
     wakeHeld = document.activeElement === wakeButton;
     claim();
   });
@@ -502,7 +505,7 @@ export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
     // Nothing is fetched until the visitor asks: a first visit waits for "wake it", on any device.
     // Weights already in this browser's cache, or a wake earlier in this tab's session, cost no
     // download, so those wake by themselves once the glass is in view.
-    const auto = cached || sessionStorage.getItem("liuru.oracle.woken") === "1";
+    const auto = (cached || sessionStorage.getItem("liuru.oracle.woken") === "1") && sessionStorage.getItem("liuru.oracle.stopped") !== "1";
     if (!auto) return;
     // the model wakes when the twin orbs come into view, not while the visitor is still writing
     const seen = new IntersectionObserver(

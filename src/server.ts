@@ -293,7 +293,8 @@ const server = createServer(async (req, res) => {
       const now = currentCursor();
       if (since) {
         const missed = missedSince(since, REPLAY_LIMIT);
-        if (missed.overflow) {
+        // a cursor ahead of the wall (its data was reset under an open page) can't be replayed from
+        if (missed.overflow || since.trace > now.trace || since.reply > now.reply) {
           res.write(sse("reset", { cursor: formatCursor(now) }, formatCursor(now)));
         } else {
           // traces first, so every replayed reply's thought is already there; each

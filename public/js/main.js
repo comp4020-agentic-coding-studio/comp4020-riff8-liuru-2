@@ -429,6 +429,8 @@ form.addEventListener("submit", async (e) => {
   }
   pendingRequest = null;
   heldEvents = heldEvents.filter((t) => t.id !== trace.id);
+  // ours even if the cookie that would have said so was lost with the first answer
+  trace = { ...trace, mine: true };
 
   if (known.has(trace.id)) {
     // it was already here: a retry found the first attempt stored, and the stream had brought it in
@@ -555,36 +557,56 @@ function connect() {
       });
     }
   });
-  es.addEventListener("reset", async (e) => {
+  es.addEventListener("reset", async () => {
     es.close();
-    await resync();
-    track(e);
-    connect();
+    // resync moves the cursor only once the snapshot is in hand; if it fails, the old
+    // cursor stays and the next attempt is told to reset again, so nothing is skipped
+    if (await resync()) {
+      if (interrupted) {
+        interrupted = false;
+        setLink("Back in touch — too much happened to replay, so the wall was read afresh.", { quiet: 5000 });
+      }
+      connect();
+    } else lostTouch();
   });
   es.onerror = () => {
     if (stream !== es) return;
     es.close();
-    if (!interrupted) {
-      interrupted = true;
-      setLink("Out of touch with the wall — new thoughts will catch up when it answers again.", { error: true });
-    }
-    // back off gently, but never give up while the page is open
-    retryTimer = setTimeout(connect, Math.min(30_000, 1500 * 2 ** retries++));
+    lostTouch();
   };
 }
 
-/** Too much was missed to replay one by one: take the wall as it is now, keeping only what's new. */
+function lostTouch() {
+  if (!interrupted) {
+    interrupted = true;
+    setLink("Out of touch with the wall — new thoughts will catch up when it answers again.", { error: true });
+  }
+  // back off gently, but never give up while the page is open
+  clearTimeout(retryTimer);
+  retryTimer = setTimeout(connect, Math.min(30_000, 1500 * 2 ** retries++));
+}
+
+/** Too much was missed to replay one by one: take the wall as it is now, keeping only what's new. True once done. */
 async function resync() {
   try {
     const res = await fetch("/snapshot", { headers: { accept: "application/json" }, cache: "no-store" });
     if (!res.ok) throw new Error(`the wall answered ${res.status}`);
     const snap = await res.json();
+    // a wall behind this page was emptied and begun again: its ids mean other thoughts now, so start over
+    const [had] = cursor.split(".").map(Number);
+    const [has] = snap.cursor.split(".").map(Number);
+    if (has < had) {
+      location.reload();
+      return false;
+    }
     // oldest first, so the newest ends up at the top of the list and the front of the glass
     for (const t of [...snap.traces].reverse()) arrive(t);
     for (const r of snap.replies) replies.add(r);
     cursor = snap.cursor;
+    return true;
   } catch (err) {
     console.warn(err);
+    return false;
   }
 }
 

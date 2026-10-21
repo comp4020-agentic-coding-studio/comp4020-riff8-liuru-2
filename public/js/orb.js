@@ -1094,6 +1094,11 @@ export function createOrb(stage, { traces, onCount, onTouch, onShow, onHold }) {
     lock(id) {
       locked = id == null ? null : (motes.find((m) => m.trace.id === id) ?? null);
       if (locked && pinned !== locked) setPinned(locked);
+      // let go while the drift was switched back on: it drifts now, rather than staying held on this thought
+      if (!locked && cycling && pinned) {
+        setPinned(null);
+        hideSoon();
+      }
     },
     /** Where, in viewport coordinates, a released thought should fly to. */
     centre() {
