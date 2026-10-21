@@ -82,41 +82,52 @@ what turned up was invisible to `pnpm check`, which was green throughout.
   did the same for each kind's glyph, which had leaned on a `title`
   tooltip. axe-core passed both before the fix: it checks markup against
   rules, not whether every visual distinction has a non-visual twin.
-- **Concurrency.** The wall's premise is strangers writing at once, so one
-  run fired dozens of simultaneous POSTs from distinct cookies at a
-  throwaway server and counted the result, rather than trusting the
-  driver's documented single-threaded guarantee. The count came back exact.
-- **The brief as a checklist.** After several clean passes, walking the
-  brief item by item found two things no consistency check could: the
-  suggested decision record had never been written (now 0001), and a README
-  citation for *Pico Park* pointed at an itch.io tag page that never
-  mentions the game.
-  [`61c58f8`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-liuru/commit/61c58f8)
-  repointed it. A link answering 200 isn't a citation checking out.
+- **Concurrency and the brief.** One run fired dozens of simultaneous
+  POSTs at a throwaway server and counted the result (exact) rather than
+  trust the driver's docs. Walking the brief item by item later found a
+  missing decision record (now 0001) and a dead *Pico Park* citation
+  ([`61c58f8`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-liuru/commit/61c58f8)).
 
-Each fix was deployed with `flyctl deploy` and checked against the live URL,
-not the local build. One deploy failed six times with "insufficient memory"
-while the scale-to-zero machine was stopped; starting the machine first and
-deploying into it went through at once.
+Each fix was deployed and checked against the live URL, not the local build.
 
 ## The harness behind it
 
-The workflow that made this possible is mostly memory, not prompts. Each
-lesson above went into `memory/MEMORY.md` as a reusable rule the next run
-loads automatically (probe a free port rather than hardcoding one, emulate
+The workflow is mostly memory, not prompts. Each lesson above went into
+`memory/MEMORY.md` as a rule the next run loads (probe a free port, emulate
 dark mode before trusting contrast, ask what each CSS-only state means to a
-screen reader), and `memory/now.md` carried one concrete next action between
-runs. The hand-off also said, more than once, to record "still clean" and
-stop rather than invent work --- which is what pushed later runs toward new
-categories instead of re-running the old ones. The last six runs before this
-final one found nothing new and, following that instruction, built
-nothing.
+screen reader), and `memory/now.md` carried one next action between runs,
+including "record still clean and stop" rather than invent work.
+
+## This riff: replies, and a wall that catches up
+
+A pod's `prompt.md` asked, in priority order, for reliable posting and
+reconnects, anonymous replies, a model that downloads only when asked, and
+easier reading. In one unattended run, I built the server layer first.
+
+The insight that shaped it was that reliability and replies share one
+mechanism. Ids only ever grow, so the pair `<trace>.<reply>` is a cursor:
+the page is rendered with the one it was read at, every event carries the
+one after it, and `/events?since=` replays the gap. A client request id under
+a unique index makes a retry return the first stored row rather than a second
+one ([7f4b63b](https://github.com/comp4020-agentic-coding-studio/comp4020-riff8-liuru-2/commit/7f4b63b)). The client keeps one reply store behind two
+views of each thread, so a reply arriving from elsewhere updates the panel
+and the list without touching an open draft ([937b530](https://github.com/comp4020-agentic-coding-studio/comp4020-riff8-liuru-2/commit/937b530)).
+[89b2924](https://github.com/comp4020-agentic-coding-studio/comp4020-riff8-liuru-2/commit/89b2924) made the model wait for an explicit wake, and
+[bed3f7a](https://github.com/comp4020-agentic-coding-studio/comp4020-riff8-liuru-2/commit/bed3f7a) brought README, `CLAUDE.md` and decision record 0004
+into line with what the wall now is.
+
+Verification ran in two separate browser sessions, plus a server killed
+mid-session to prove a disconnected page catches up, and a monkeypatched
+`fetch` to lose a POST's answer and confirm the retry reused its id. Then an
+independent reviewer read the diff. It found a real bug: a failed
+snapshot during a `reset` moved the cursor forward and reported "nothing was
+missed". It also found four edge cases, all fixed in [8f811ff](https://github.com/comp4020-agentic-coding-studio/comp4020-riff8-liuru-2/commit/8f811ff).
+One mistake of my own: I committed once before reading a test result, and a
+race in my own spec turned it red. I folded the fix into that commit before
+going on, and `spec/README.md` now warns that spec files run in parallel
+against one app.
 
 ## What's next
 
-Crit 9 asks for the real-time layer and a documented multi-user decision.
-The wall updates only on reload today, which is the gap between this slice
-and the co-presence README argues for. Decision record 0001 already names
-Server-Sent Events from the same server as the plan, and when that would
-stop being enough. Rate limiting and moderation stay named in README as
-real, open gaps.
+Rate limiting and moderation stay named in README as real, open gaps, and
+replies make them more pressing: a reply is aimed at one person's words.
