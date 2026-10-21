@@ -1,102 +1,70 @@
 # 六如 — a wall for passing things
 
-This is a shared wall. Anyone who visits can leave a short, passing
-thought — tagged as one of the six similes from the closing lines of the
-Diamond Sūtra: a dream, an illusion, a bubble, a shadow, dew, a flash of
-lightning. Those six are also where my own name in this course comes from
-(Tang Yin's Buddhist name, 六如, "the six as-ifs"), so the theme isn't
-decoration bolted onto a generic guestbook — it's the actual design
-constraint: everything on the wall is supposed to feel like it's already
-passing.
+This is a shared wall. Anyone who visits can leave a short, passing thought,
+tagged as one of the six similes from the closing lines of the Diamond Sūtra:
+a dream, an illusion, a bubble, a shadow, dew, a flash of lightning. Those
+six are where my name in this course comes from (Tang Yin's Buddhist name,
+六如, "the six as-ifs"), so the theme is the design constraint, not
+decoration: everything here is supposed to feel like it's already passing.
 
 ## What good means here
 
-Good, for this app, is small and quiet rather than sticky. The brief points at
-the small web, home-cooked software, and games built for a handful of people
-rather than a market, and those are the three things I actually leaned on
-while deciding what to build and what to leave out.
+Good, for this app, is small and quiet rather than sticky. Robin Sloan's
+[*An App Can Be a Home-Cooked Meal*](https://www.robinsloan.com/notes/home-cooked-app/)
+argues that software for a small circle can just be finished, with nothing
+chasing you back. The wall has no accounts, no
+follower counts, no read receipts.
 
-Robin Sloan's [*An App Can Be a Home-Cooked Meal*](https://www.robinsloan.com/notes/home-cooked-app/)
-argues that software made for a specific, small circle of people — not a
-public, not a userbase — can afford to just be finished: no growth loop, no
-notifications chasing you back. The wall has no accounts, no follower count,
-no read receipts. You can find your own trace again, but there's nothing here
-trying to make you come back.
+The [Small Technology Foundation](https://small-tech.org/)'s case for a
+small web, public spaces people can understand the whole of, is why nothing
+is curated or ranked. Thoughts hang in a crystal ball, each light moving the
+way its as-if moves; older lights grow fainter, the glass's only ordering. The same thoughts sit in a plain newest-first list beneath it,
+and choosing one there turns its light to the front of the glass.
 
-The [Small Technology Foundation](https://small-tech.org/)'s case for a small
-web — public spaces people can actually understand the whole of, without
-tracking or an algorithmic feed — is why nothing on the wall is curated or
-ranked. The thoughts hang in a crystal ball, each one a light that moves the
-way its own as-if moves (dreams drift, shadows trail smoke, lightning
-crackles when a hand comes near), and you turn the glass to find them. Older
-lights grow fainter, the only ordering the glass has. No light is brighter
-for being popular, and underneath the orb the same
-thoughts sit in one plain newest-first list, for anyone who'd rather read
-than scry. What you see is what's actually there.
+A thought can be answered. Replies are anonymous, one level deep, oldest
+first, and quiet: a count and a fold under the thought, never a like, a
+name or a notification. A reply is a second voice in the room, not a thread
+that pulls you back.
 
-And the design point the final-project brief itself makes explicitly — build
-something that's *better* because other people are using it right now, the
-way small local-multiplayer games (like [*Pico Park*](https://store.steampowered.com/app/1509960/PICO_PARK/))
-only work because everyone is present at once — is why the orb is live. When
-someone else lets a thought go, it falls into your glass while you watch,
-without a reload. That's the whole of the co-presence: no names, no
-"someone is typing", just the sense that the ball is filling.
+And the brief's own point, that something should be *better* because other
+people are using it now, the way [*Pico Park*](https://store.steampowered.com/app/1509960/PICO_PARK/)
+only works with everyone present, is why the wall is live. Someone else's
+thought falls into your glass while you watch, and their reply appears
+under the thought you are reading without disturbing what you're writing.
+A page that loses its connection says so, then catches up on exactly what
+it missed.
 
 ## The second glass
 
-Beside the human orb sits a second one that holds what a small language
-model imagines from what people left. It runs
-[LFM2.5-230M](https://huggingface.co/LiquidAI/LFM2.5-230M) in your own
-browser (on the GPU where it can, otherwise the CPU), reading a few of the
-stored thoughts at a time and writing one short fragment every few seconds.
-It keeps its last eight fragments and a short note of older ones in your
-browser only, so it carries on from where it was rather than starting
-again. Its thoughts are labelled as generated everywhere they appear, and
-never stored on the wall or mixed with anyone's words. The light that
-crosses from the left glass to the right carries the colours of exactly the
-thoughts it was shown. Why it runs in the browser and not on the server,
-what was measured, and the bounds it keeps are in
-[decision record 0003](docs/decisions/0003-the-model-runs-in-the-visitors-browser.md).
+Beside the human orb a second one holds what a small language model
+imagines from what people left. It runs
+[LFM2.5-230M](https://huggingface.co/LiquidAI/LFM2.5-230M) in your browser,
+and only once you ask: waking it names the download, and you can cancel or
+stop it. It reads a few stored thoughts at a time, never replies, and keeps
+its short memory in your browser. Its thoughts are labelled as
+generated everywhere and never stored on the wall.
+[Decision record 0003](docs/decisions/0003-the-model-runs-in-the-visitors-browser.md)
+has the measurements.
 
 ## What's enforced vs. what's judged
 
-Enforced, in `spec/`: a trace needs a real kind (one of the six) and non-empty
-text capped at 240 characters, or the server silently drops it rather than
-storing garbage. Traces persist in SQLite on the app's own volume, so they
-survive a restart or a redeploy — not just the current process. The model's
-memory stays inside its bounds across hundreds of generations and repeated
-compaction, human words never enter its summary, and its loop never runs two
-generations at once; those are checked against test doubles, while the real
-model was checked by hand in Chrome, on both its GPU and CPU paths.
+Enforced, in `spec/`: a trace needs one of the six kinds and non-empty text
+capped at 240 characters. A reply needs a thought that exists and 1--240
+characters, or it is refused with a reason. Both persist in SQLite on the
+app's volume. A retried post is stored once; a page reconnecting from any
+point gets everything after it, or is told to reload its view
+([decision record 0004](docs/decisions/0004-replies-and-catching-up.md)
+says where that limit sits). The model's memory stays bounded and never
+holds human words or replies.
 
-Judged, by me now and by a reader later: whether the wall actually feels like
-the six similes it's named after, not a message board with a select box on
-it, and whether the orb stays legible once real people have filled it.
-I haven't built moderation, rate limiting, or a way to remove a trace — for a
-wall this small, the honest position is that I haven't yet had a reason to
-need any of them, not that I've reasoned my way out of needing them forever.
+Judged, by me and by a reader: whether the wall feels like the six similes,
+not a message board with a select box, and whether replies stay quiet in
+real use.
 
 ## What I deliberately didn't build yet
 
-No visible distinction between visitors beyond "yours vs. everyone else's"
-(no names, colours, or avatars), no server-side logging beyond what Fly
-captures by default (crit 11), and no moderation. All three are real gaps,
-not oversights.
-
-## Sound, type and licences
-
-Every sound except the Bubble music is synthesised in the browser with the
-Web Audio API (`public/js/audio.js`): six small palettes, one per as-if, and
-a seventh voice for the model's glass, so there is no third-party audio to
-license. Sound starts only after you touch
-the page, and the control in the corner mutes it for the session. The Bubble
-music, `assets/bubble_background_music.mp3`, was supplied with this riff's
-brief by the pod that wrote it. The hanzi are set in
-[Ma Shan Zheng](https://fonts.google.com/specimen/Ma+Shan+Zheng) and the text
-in [Cormorant Garamond](https://fonts.google.com/specimen/Cormorant+Garamond),
-both under the SIL Open Font License; the subsets and their licence texts
-are in `public/fonts/`. The model is under the
-[LFM Open License v1.0](https://huggingface.co/LiquidAI/LFM2.5-230M-ONNX/blob/main/LICENSE);
-its weights are fetched from Hugging Face by your browser, not redistributed
-here, and the runtime is [transformers.js](https://github.com/huggingface/transformers.js)
-(Apache 2.0) with onnxruntime-web (MIT).
+No moderation, rate limiting or way to remove a trace or reply, and no
+distinction between visitors beyond "yours" and everyone else's. For a wall
+this small I haven't yet needed them, which isn't the same as never
+needing them. Sound, type and licences are in
+[docs/credits.md](docs/credits.md).

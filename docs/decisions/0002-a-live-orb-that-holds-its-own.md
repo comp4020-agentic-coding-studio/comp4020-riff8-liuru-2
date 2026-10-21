@@ -15,17 +15,17 @@ else's thought arrives while yours is still mid-flight?
 
 - `GET /events` is a Server-Sent Events stream from the same `node:http`
   server, as 0001 planned. Every stored trace is broadcast to every open
-  page, without its visitor id. A heartbeat comment every 25 seconds keeps
-  idle proxies from closing the connection; `EventSource` reconnects on its
-  own.
+  page, without its visitor id. A heartbeat comment every 20 seconds keeps
+  idle proxies from closing the connection. Reconnecting, and catching up on
+  what was missed, is decision record 0004.
 - Other people's thoughts fall into the glass from above, with the
   orb pulsing as each arrives. A screen reader hears "someone else just let
   go of a shadow: …".
 - While your own thought is being released, arrivals from the stream are
   held back, then let in once yours has landed. Your thought is always the
   one the orb turns to and reads out. Its own broadcast is recognised by id
-  and dropped, so it never shows up twice or gets announced as someone
-  else's.
+  (and by its request id, if the POST's answer was lost) and dropped, so it
+  never shows up twice or gets announced as someone else's.
 
 ## Alternatives weighed
 

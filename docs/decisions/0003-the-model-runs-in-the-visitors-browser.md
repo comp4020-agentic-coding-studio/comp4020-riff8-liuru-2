@@ -43,10 +43,11 @@ All on this development machine (48 cores), 8 October 2026.
   out-of-memory error during generation falls to the next candidate the
   same way, keeping every thought so far. With no candidate left, the glass
   says it can't run here and the guestbook carries on.
-- **When it wakes:** by itself when the orbs come into view, unless the
-  pointer is coarse or the connection asks to save data; then it waits for a
-  "wake it" button that names the download size. Already-cached weights
-  always wake by themselves.
+- **When it wakes:** never by itself on a first visit. A "wake it" button
+  names the download size, and "cancel the download" or "stop it" lets it go
+  again. Weights already in this browser's cache, or a wake earlier in the
+  same tab's session, cost no download, so those wake by themselves once the
+  orbs come into view. A load that fails offers "try again".
 - **One stream per browser, not per site.** The memory lives in this
   browser's `localStorage`, never on the server and never in the human
   table. A Web Lock allows one generator across the browser's tabs; other

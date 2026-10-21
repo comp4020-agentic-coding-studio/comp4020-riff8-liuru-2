@@ -291,6 +291,19 @@ Do not introduce external services requiring credentials unless they are already
 
 ---
 
+# The Wall's Own Rules
+
+`README.md` is the argument; these are the rules it implies. `spec/` enforces the testable ones.
+
+- No accounts, names, avatars, likes, follower counts, rankings or notifications. "Yours" (by the visitor cookie) is the only distinction between visitors.
+- A trace is one of the six kinds and 1–240 characters. A reply is 1–240 characters under an existing trace, one level deep, oldest first. The server refuses bad replies with a reason; the plain trace form drops bad posts silently.
+- Replies are human data. Never pass them to the model, and never store or mix model output with traces or replies.
+- Every post carries a client request id; a retry of the same words reuses it and the database stores it once. Never deduplicate by text.
+- The live stream is cursor-based (`docs/decisions/0004-*`): a change to what is broadcast must keep `/events?since=` replaying it, and keep each event's SSE id the cursor after it.
+- Model weights download only after an explicit wake, unless already cached or woken earlier in the tab's session.
+
+---
+
 # Autonomous Model and Quantization Selection
 
 Choose the application model and quantization yourself, following the memory-aware selection requirements in `prompt.md`. LFM2.5-230M is a starting candidate, not a fixed dependency. You may choose another suitable model, a different parameter size, or a supported quantization without asking the user. This concerns the application's inference model, not the underlying model of the coding agent.

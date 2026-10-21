@@ -27,6 +27,20 @@ Everything else in `spec/` is yours to write. Any `spec/*.test.ts` runs with
 `pnpm check`, against the same running app. Some lines of a spec only a person
 can judge; those are left to the crit and the marker.
 
+This wall's own checks:
+
+- `trace.test.ts`: the plain form keeps a real trace and drops garbage
+- `live.test.ts`: JSON posts, the live stream, static routes, malformed headers
+- `replies.test.ts`: replies persist under their thought, in order, validated,
+  rendered as text, and kept away from the model
+- `recovery.test.ts`: retried posts are stored once, and a reconnecting page
+  replays exactly what it missed (or is told to reload its view)
+- `twins.test.ts`, `oracle.test.ts`: the two glasses stay distinct, and the
+  model's memory and loop stay bounded (against test doubles)
+
+Test files run in parallel against one app, so a test never assumes it is
+the only one posting.
+
 At a crit, a green `check` job is half the shipped mark, but it's never the
 judgement of the work: your tutor checks what you deployed against the published
 spec.
