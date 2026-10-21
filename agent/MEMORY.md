@@ -29,8 +29,11 @@ repo, each rewriting `PROCESS.md` rather than appending: crit 8 (finished,
 `f16f570`) was proof of life only; crit 9 adds the real-time layer (SSE)
 plus decision record 0002 (presence as three unnumbered states, because
 `CLAUDE.md` forbids reader counts --- the repo's own rules shaped the
-decision rather than just constraining it); crit 11 adds server-side logging; crit 12 is studio
-finishing time. `README.md` runs 400--600 words, `PROCESS.md` 900--1100,
+decision rather than just constraining it; finished, `75cdcdd`); crit 10 ("Fly by instruments") adds identity,
+server-side authorisation and who-did-what logging (decision record 0003:
+a person is a server-issued cookie, logged as a hash of it; finished,
+`b369382`); crit 12 is
+studio finishing time. `README.md` runs 400--600 words, `PROCESS.md` 900--1100,
 and (COMP8020 only) a separate `research-note.md` runs 600--800 words
 arguing a broader position on agentic practice, not just this project ---
 see that repo's own `now.md` for the current build state.
@@ -92,6 +95,10 @@ see that repo's own `now.md` for the current build state.
   --- there is no `--viewport` flag on `open`; passing one is silently
   ignored and you get the default (1280-wide) window instead, which looks
   fine but isn't actually testing the phone breakpoint.
+- `agent-browser` can lose its mise shim default ("No version is set for
+  shim"). Call it as `mise exec npm:agent-browser@0.39.1 -- agent-browser`,
+  wrapped in a shell function: zsh won't word-split a command held in a
+  variable.
 - Chrome isn't preinstalled; `agent-browser install` (and `--with-deps` if
   shared libs are missing) is a one-time per-worktree setup cost.
 - `agent-browser mouse down`/`mouse up` take an optional *button* name
@@ -241,7 +248,8 @@ see that repo's own `now.md` for the current build state.
 - An SSE stream through Fly's proxy (`comp4020-final-liuru`) survives idle
   as long as the server writes a comment line every 20 s --- confirmed by a
   75 s `curl -sN` that stayed open with four heartbeats. An open stream also
-  keeps a scale-to-zero machine awake.
+  keeps a scale-to-zero machine awake. A cold start from `stopped` takes
+  ~5 s for the first `GET /` (warm: ~30 ms), so wake it before a crit demo.
 - `pnpm-workspace.yaml`'s `allowBuilds` allow-list (pnpm v10+ blocks a
   dependency's install/postinstall script by default) has to name *every*
   dependency with a native build step, not just whichever one the starter
@@ -866,6 +874,18 @@ see that repo's own `now.md` for the current build state.
   one (*Pico Park*) pointed at an itch.io tag page that never mentions the
   game. A link resolving 200 isn't a citation checking out --- grep the
   fetched page for the thing it's labelled as.
+- Rehearse a "narrate from the logs" crit without a browser: two `curl -c
+  a.jar`/`-c b.jar` cookie jars stand in for two Chrome profiles, then
+  `flyctl logs --no-tail`. On `comp4020-final-liuru` this showed a forged
+  cookie's line was indistinguishable from a first visit --- a log has to
+  say *why* an event happened, not just that it did. Run `flyctl` via
+  `mise exec --` from inside the repo; elsewhere the shim has no version.
+- Any hand-rolled cookie parser using `decodeURIComponent` needs a
+  try/catch: one request with a malformed `%` escape throws `URIError`
+  outside the route's own try block and kills a plain `node:http` server
+  outright. Found on `comp4020-final-liuru`'s crit-10 run by sending a
+  garbage cookie before adding identity logic, not by any existing test ---
+  worth probing on any app whose identity is a cookie.
 - A hand-off framing something as a policy question ("replays up to 200,
   decide if that's fine") can hide a bug. Read what the query actually
   returns before deciding. On `comp4020-final-liuru`'s crit-9 replay it was

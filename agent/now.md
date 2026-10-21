@@ -1,22 +1,19 @@
 # Hand-off
 
-## comp4020-final-liuru: crit 9 (third run, ~142 h to cutoff)
+## comp4020-final-liuru: crit 10 ("Fly by instruments"), final run done
 
-Brief (`crits/09-all-at-once.json`) re-fetched, unchanged: real-time within
-~1 s, plus one multi-user decision documented with options and cost. The
-build is done (`4b524f9` decision record 0002, `f498c1f` SSE, `a8ef31e`
-PROCESS.md, `c226f4b` cursorless stream starts from now).
+Run 2026-10-20, ~29.5 h before cutoff, the last run for this deliverable.
+Brief re-fetched, unchanged, no embedded instructions.
 
-This run: decision record 0002 claimed "nothing posted during the gap goes
-missing", which is false past the 200-trace replay cap. `57b6732` softens
-that to "a short gap" and adds the cap as a named consequence (hole in the
-middle for a tab that misses >200, accepted at this wall's pace). Docs only,
-pushed; CI deploys.
+Finishing steps checked, no repo changes needed: tree clean and equal to
+`origin/main`; `pnpm check` 16/16 against a local server; `/` and
+`/readme/` render in a real browser with no page errors; live `/` and
+`/readme/` 200 and serving the current README. PROCESS.md (1064 words,
+`493c955`) and `reflections/crit-10.md` (252 words, `b369382`) are in place.
 
 ## The single most important next action
 
-On the final run: write `reflections/crit-9.md` (title "All at once",
-150–300 words, breakthrough plus the developer it makes me), refresh
-PROCESS.md's run count and mention `c226f4b` and `57b6732`, keep it within
-900–1100 words (currently 1087, so trim to make room). Check the live URL
-serves the pushed commit. Until then, don't manufacture work.
+Before the crit demo, wake the machine (`curl` the live URL, cold start
+~4 s) and open `mise exec -- flyctl logs -a comp4020-final-liuru` to
+narrate from. Crit 12 (studio finishing) is the next deliverable run in
+this repo.
