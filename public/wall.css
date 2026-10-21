@@ -1578,18 +1578,24 @@ ol.wall {
 }
 
 li.trace {
+  padding: 0.55rem 0.7rem;
+  border-radius: 4px;
+  border-bottom: 1px solid rgb(236 230 245 / 6%);
+  scroll-margin-block: 6rem;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+
+.trace-row {
   display: grid;
   grid-template-columns: 2rem minmax(0, 1fr) auto;
   gap: 0.7rem;
   align-items: baseline;
-  padding: 0.55rem 0.7rem;
-  border-radius: 4px;
-  border-bottom: 1px solid rgb(236 230 245 / 6%);
-  transition: background 0.3s;
 }
 
+/* the thought being read in the glass: the same light, marked in the list too */
 li.trace.lit {
   background: rgb(236 230 245 / 7%);
+  box-shadow: inset 2px 0 0 var(--k-a);
 }
 
 li.trace.mine {
@@ -1629,6 +1635,34 @@ li.trace.kind-lightning .glyph {
 li.trace .text {
   overflow-wrap: anywhere;
   min-width: 0;
+}
+
+/* the words are a button that reads them in the glass, but look like the words they are */
+.trace-read {
+  padding: 0.1rem 0;
+  color: inherit;
+  font: inherit;
+  font-size: 1.12rem;
+  line-height: 1.4;
+  text-align: left;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-decoration: underline transparent;
+  text-underline-offset: 0.25em;
+  transition: text-decoration-color 0.3s;
+}
+
+.trace-read:hover {
+  text-decoration-color: color-mix(in oklab, var(--k-a) 60%, transparent);
+}
+
+.trace-read:hover::after,
+.trace-read:focus-visible::after {
+  content: " ◌ read in the glass";
+  color: var(--muted);
+  font-size: 0.85rem;
+  white-space: nowrap;
 }
 
 li.trace .when {
@@ -1745,6 +1779,442 @@ canvas.release-layer {
 }
 
 /* ---------- smaller screens ---------- */
+
+
+/* ---------- reading first: the way from the composer to the thoughts ---------- */
+
+.explore-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1rem;
+  align-items: baseline;
+  margin: 0.9rem 0 0.6rem;
+}
+
+.explore {
+  display: inline-flex;
+  gap: 0.55rem;
+  align-items: baseline;
+  padding: 0.35rem 1rem 0.4rem 0.7rem;
+  color: var(--paper);
+  font-size: 1.15rem;
+  font-style: italic;
+  text-decoration: none;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  transition: border-color 0.3s, transform 0.3s var(--ease-out), background 0.3s;
+}
+
+.explore:hover {
+  color: var(--paper);
+  background: color-mix(in oklab, var(--k-a) 8%, transparent);
+  border-color: color-mix(in oklab, var(--k-a) 60%, transparent);
+  transform: translateY(-1px);
+}
+
+.explore-seal {
+  font-family: var(--brush);
+  font-size: 1.25rem;
+  font-style: normal;
+  color: var(--k-a);
+}
+
+.explore-n {
+  color: var(--muted);
+  font-size: 0.98rem;
+}
+
+.explore-n::before {
+  content: "· ";
+}
+
+.explore-or {
+  margin: 0;
+  font-size: 1rem;
+}
+
+/* ---------- the drift, held or running, said in words ---------- */
+
+.cycle-state {
+  min-height: 1.4em;
+  margin: 0.5rem 0 0;
+  color: var(--muted);
+  font-size: 1rem;
+  font-style: italic;
+  text-align: center;
+}
+
+.cycle-state::before {
+  content: "";
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-right: 0.5rem;
+  vertical-align: 0.1em;
+  border-radius: 50%;
+  background: var(--k-a);
+  box-shadow: 0 0 0.6rem var(--k-a);
+  animation: breathe 2.4s var(--ease-soft) infinite;
+}
+
+.orb-stage.held .cycle-state::before {
+  width: 0.45rem;
+  border-radius: 1px;
+  background: none;
+  box-shadow: none;
+  border-inline: 2px solid var(--k-a);
+  animation: none;
+}
+
+@keyframes breathe {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.filter-state {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.8rem;
+  justify-content: center;
+  align-items: baseline;
+  max-width: 34rem;
+  margin: 0.8rem auto 0;
+  color: var(--muted);
+  font-style: italic;
+  text-align: center;
+}
+
+.filter-all,
+.reveal-back {
+  padding: 0.15rem 0.8rem;
+  color: var(--paper);
+  font: inherit;
+  font-style: italic;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: border-color 0.3s;
+}
+
+.filter-all:hover,
+.reveal-back:hover {
+  border-color: var(--k-a);
+}
+
+.reveal-back {
+  margin-top: 0.8rem;
+  font-size: 0.95rem;
+}
+
+.ledger-empty {
+  margin: 1.2rem auto 0;
+  color: var(--muted);
+  font-style: italic;
+  text-align: center;
+}
+
+/* ---------- the connection, only when it matters ---------- */
+
+.link-state {
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  z-index: 26;
+  max-width: min(34rem, calc(100vw - 2rem));
+  margin: 0;
+  padding: 0.45rem 1.1rem;
+  color: var(--paper);
+  font-size: 1.02rem;
+  font-style: italic;
+  text-align: center;
+  background: rgb(10 8 18 / 90%);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  backdrop-filter: blur(8px);
+  transform: translate(-50%, 0);
+  transition: opacity 0.4s, transform 0.5s var(--ease-out);
+}
+
+.link-state.error {
+  border-color: #e8b98faa;
+}
+
+.link-state.error::before {
+  content: "◌ ";
+  color: #e8b98f;
+}
+
+.link-state:empty {
+  opacity: 0;
+  transform: translate(-50%, -1rem);
+  pointer-events: none;
+}
+
+/* ---------- replies: a quiet thread under a thought ---------- */
+
+.answers {
+  margin-top: 0.35rem;
+  font-size: 1rem;
+}
+
+.answers-list {
+  margin-left: 2.7rem;
+}
+
+.answers-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.9rem;
+  align-items: center;
+  min-height: 2rem;
+}
+
+.answers-toggle,
+.reply-open {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.1rem 0.15rem;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.98rem;
+  font-style: italic;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  transition: color 0.25s;
+}
+
+.answers-toggle:hover,
+.reply-open:hover,
+.reply-open[aria-expanded="true"] {
+  color: var(--paper);
+}
+
+.reply-open-mark {
+  color: var(--k-a);
+  font-style: normal;
+}
+
+.answers-none {
+  color: var(--faint);
+  font-size: 0.95rem;
+  font-style: italic;
+}
+
+.answers-chevron::before {
+  content: "▸";
+  display: inline-block;
+  font-style: normal;
+  transition: transform 0.25s var(--ease-out);
+}
+
+.answers.expanded .answers-chevron::before {
+  transform: rotate(90deg);
+}
+
+.answers-left {
+  color: var(--k-a);
+  font-style: italic;
+  animation: left-fade 2.6s var(--ease-out) forwards;
+}
+
+@keyframes left-fade {
+  70% {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+ol.replies {
+  display: grid;
+  gap: 0.15rem;
+  margin: 0.2rem 0 0.4rem;
+  padding: 0 0 0 0.9rem;
+  list-style: none;
+  border-left: 1px solid color-mix(in oklab, var(--k-a) 35%, transparent);
+}
+
+li.reply {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.6rem;
+  align-items: baseline;
+  padding: 0.2rem 0;
+  line-height: 1.4;
+}
+
+li.reply.arrived {
+  animation: arrived 2.4s var(--ease-out);
+}
+
+.reply-who {
+  color: var(--faint);
+  font-size: 0.85rem;
+  font-variant: small-caps;
+  letter-spacing: 0.06em;
+}
+
+li.reply.mine .reply-who {
+  color: var(--k-a);
+}
+
+.reply-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+li.reply .when {
+  color: var(--faint);
+  font-size: 0.85rem;
+  font-style: italic;
+  white-space: nowrap;
+}
+
+.reply-form {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.4rem 0 0.6rem;
+  padding: 0.7rem 0.8rem 0.6rem;
+  background: rgb(10 8 18 / 60%);
+  border: 1px solid color-mix(in oklab, var(--k-a) 35%, transparent);
+  border-radius: 6px;
+}
+
+.reply-to {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-style: italic;
+}
+
+.reply-to q {
+  color: var(--paper);
+}
+
+.reply-label {
+  font-size: 0.95rem;
+}
+
+.reply-form textarea {
+  width: 100%;
+  min-height: 3.6rem;
+  padding: 0.5rem 0.6rem;
+  color: var(--paper);
+  font: inherit;
+  font-size: 1.1rem;
+  line-height: 1.35;
+  background: rgb(236 230 245 / 5%);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  resize: vertical;
+}
+
+.reply-form textarea:focus-visible {
+  outline-offset: 1px;
+}
+
+.reply-form textarea[aria-invalid="true"] {
+  border-color: #ff8fa3aa;
+}
+
+.reply-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.reply-count {
+  margin-right: auto;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-style: italic;
+}
+
+.reply-count.near {
+  color: var(--k-a);
+}
+
+.reply-cancel,
+.reply-send {
+  min-height: 2.4rem;
+  padding: 0.2rem 1rem;
+  color: var(--paper);
+  font: inherit;
+  font-size: 1rem;
+  font-style: italic;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.reply-send {
+  background: color-mix(in oklab, var(--k-a) 16%, transparent);
+  border-color: color-mix(in oklab, var(--k-a) 60%, transparent);
+}
+
+.reply-send:hover,
+.reply-cancel:hover {
+  border-color: var(--k-a);
+}
+
+.reply-send[aria-disabled="true"],
+.reply-cancel:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+.reply-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-style: italic;
+}
+
+.reply-status:empty {
+  display: none;
+}
+
+.reply-status.error {
+  color: #ffd0d8;
+}
+
+.reply-status.error::before {
+  content: "✕ ";
+}
+
+/* the panel's own thread sits under the thought being read, scrolling if it grows long */
+.reveal .answers {
+  margin-top: 0.8rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--line);
+}
+
+.reveal ol.replies {
+  max-height: 14rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* without a script, the replies are a plain details element under each thought */
+.thread-plain {
+  margin: 0.2rem 0 0 2.7rem;
+  color: var(--muted);
+  font-size: 0.98rem;
+}
+
+.thread-plain summary {
+  font-style: italic;
+  cursor: pointer;
+}
 
 @media (width <= 1000px) {
   .cards {

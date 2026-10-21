@@ -1,4 +1,4 @@
-import { KINDS, type Kind, type Trace } from "./db.ts";
+import { KINDS, MAX_TEXT, type Kind, type Reply, type Trace } from "./db.ts";
 
 const KIND_META: Record<
   Kind,
@@ -73,6 +73,17 @@ export function publicTrace(t: Trace, visitorId: string) {
   return { id: t.id, kind: t.kind, text: t.text, createdAt: t.createdAt, mine: t.visitorId === visitorId };
 }
 
+/** The same for a reply: anonymous to everyone, recognisable only to whoever left it. */
+export function publicReply(r: Reply, visitorId: string) {
+  return { id: r.id, traceId: r.traceId, text: r.text, createdAt: r.createdAt, mine: r.visitorId === visitorId };
+}
+
+/** JSON that is safe inside a <script> element: no "</script>", no HTML comment openers. */
+const scriptJson = (value: unknown): string =>
+  JSON.stringify(value).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
+
+const repliesLabel = (n: number): string => (n === 1 ? "1 reply" : `${n} replies`);
+
 const shell = (title: string, bodyClass: string, body: string): string => `<!doctype html>
 <html lang="en-AU">
   <head>
@@ -91,15 +102,36 @@ const shell = (title: string, bodyClass: string, body: string): string => `<!doc
   </body>
 </html>`;
 
-function traceItem(t: Trace, visitorId: string): string {
+function replyItem(r: Reply, visitorId: string): string {
+  const isMine = r.visitorId === visitorId;
+  return `<li class="reply${isMine ? " mine" : ""}" data-id="${r.id}">
+                <span class="reply-who">${isMine ? "you" : "anonymous"}</span>
+                <span class="reply-text">${escapeHtml(r.text)}</span>
+                <time class="when" datetime="${new Date(r.createdAt).toISOString()}">${relativeTime(r.createdAt)}</time>
+              </li>`;
+}
+
+function traceItem(t: Trace, replies: Reply[], visitorId: string): string {
   const meta = KIND_META[t.kind];
   const isMine = t.visitorId === visitorId;
   const mineLabel = isMine ? `<span class="visually-hidden">yours: </span>` : "";
-  return `<li class="trace kind-${t.kind}${isMine ? " mine" : ""}" data-id="${t.id}" data-kind="${t.kind}" data-created="${t.createdAt}"${isMine ? " data-mine" : ""}>
-            <span class="glyph" aria-hidden="true" title="${meta.hanzi} ${escapeHtml(meta.label)}">${meta.hanzi}</span>
-            <span class="visually-hidden">tagged as ${escapeHtml(meta.label)}: </span>
-            <span class="text">${mineLabel}${escapeHtml(t.text)}</span>
-            <time class="when" datetime="${new Date(t.createdAt).toISOString()}">${relativeTime(t.createdAt)}</time>
+  // without a script the replies are simply there to read; the page's script rebuilds this list with controls
+  const thread = replies.length
+    ? `
+            <details class="thread-plain">
+              <summary>${repliesLabel(replies.length)}</summary>
+              <ol class="replies">
+              ${replies.map((r) => replyItem(r, visitorId)).join("\n              ")}
+              </ol>
+            </details>`
+    : "";
+  return `<li class="trace kind-${t.kind}${isMine ? " mine" : ""}" id="trace-${t.id}" data-id="${t.id}" data-kind="${t.kind}">
+            <div class="trace-row">
+              <span class="glyph" aria-hidden="true" title="${meta.hanzi} ${escapeHtml(meta.label)}">${meta.hanzi}</span>
+              <span class="visually-hidden">tagged as ${escapeHtml(meta.label)}: </span>
+              <span class="text">${mineLabel}${escapeHtml(t.text)}</span>
+              <time class="when" datetime="${new Date(t.createdAt).toISOString()}">${relativeTime(t.createdAt)}</time>
+            </div>${thread}
           </li>`;
 }
 
@@ -152,10 +184,19 @@ function countLine(n: number): string {
   return `${n === 1 ? "One thought" : `${n} thoughts`}, held for a while.`;
 }
 
-export function renderWall(traces: Trace[], visitorId: string): string {
+export function renderWall(traces: Trace[], replies: Reply[], cursor: string, visitorId: string): string {
+  const byTrace = new Map<number, Reply[]>();
+  for (const r of replies) byTrace.set(r.traceId, [...(byTrace.get(r.traceId) ?? []), r]);
   const items = traces.length
-    ? traces.map((t) => traceItem(t, visitorId)).join("\n")
+    ? traces.map((t) => traceItem(t, byTrace.get(t.id) ?? [], visitorId)).join("\n")
     : `<li class="empty">nothing has passed through yet</li>`;
+  // the page's script starts from exactly this, and asks the stream for everything after `cursor`
+  const data = scriptJson({
+    cursor,
+    maxText: MAX_TEXT,
+    traces: traces.map((t) => publicTrace(t, visitorId)),
+    replies: replies.map((r) => publicReply(r, visitorId)),
+  });
   const count = traces.length;
 
   const body = `
@@ -182,6 +223,7 @@ export function renderWall(traces: Trace[], visitorId: string): string {
             <div class="composer">
               <h2 id="compose-h" class="ask"><label for="thought">What passed through your mind?</label></h2>
               <p class="whisper" id="thought-hint">A thought, a feeling, a fragment &mdash; not an essay.</p>
+              <p class="explore-wrap"><a class="explore" href="#scry"><span class="explore-seal" lang="zh-Hant" aria-hidden="true">觀</span>Explore the thoughts${count ? ` <span class="explore-n">${count === 1 ? "one is" : `${count} are`} already here</span>` : ""}</a> <span class="whisper explore-or">read first, if you like; write when you&rsquo;re ready</span></p>
               <div class="pool">
                 <textarea id="thought" name="text" maxlength="240" required rows="4" spellcheck="true"
                   aria-describedby="thought-hint thought-count" placeholder="it was only for a moment, but&hellip;"></textarea>
@@ -231,12 +273,13 @@ export function renderWall(traces: Trace[], visitorId: string): string {
                   <canvas class="orb-canvas" aria-hidden="true"></canvas>
                 </div>
                 ${pedestal("human")}
+                <p class="cycle-state js-only" aria-hidden="true"></p>
                 <div class="cycle js-only" role="group" aria-label="the thoughts drifting through the glass">
                   <button type="button" class="cycle-step" data-dir="-1"><span aria-hidden="true">‹</span><span class="visually-hidden">earlier thought</span></button>
                   <button type="button" class="cycle-toggle" aria-pressed="false"><span>hold the drift</span></button>
                   <button type="button" class="cycle-step" data-dir="1"><span class="visually-hidden">next thought</span><span aria-hidden="true">›</span></button>
                 </div>
-                <div class="reveal"></div>
+                <div class="reveal" tabindex="-1" aria-label="the thought being read"></div>
                 <p class="visually-hidden orb-live" aria-live="polite" aria-atomic="true"></p>
                 <p id="orb-help" class="visually-hidden">Each thought drifts to the front of the glass in turn. Left and right arrow keys move between them by hand, and each is read out as it comes to the front; Escape lets go of it.</p>
               </div>
@@ -246,6 +289,7 @@ export function renderWall(traces: Trace[], visitorId: string): string {
                     `<button type="button" class="legend-kind" data-kind="${k}" aria-pressed="false"><span class="legend-hanzi" lang="zh-Hant" aria-hidden="true">${KIND_META[k].hanzi}</span>${KIND_META[k].name}</button>`,
                 ).join("\n                ")}
               </div>
+              <p class="filter-state js-only" hidden><span class="filter-words" role="status"></span> <button type="button" class="filter-all">show every thought</button></p>
             </section>
 
             <section class="twin twin-model" aria-labelledby="model-h" aria-describedby="model-what">
@@ -281,8 +325,9 @@ export function renderWall(traces: Trace[], visitorId: string): string {
           </div>
 
           <p class="again-wrap js-only"><button type="button" class="again">leave another thought</button></p>
-          <details class="ledger" open>
-            <summary>every thought people left, as plain text</summary>
+          <details class="ledger wall-ledger" id="ledger" open>
+            <summary>every thought people left, as plain text, with their replies</summary>
+            <p class="ledger-empty js-only" hidden></p>
             <ol class="wall">
           ${items}
             </ol>
@@ -298,6 +343,9 @@ export function renderWall(traces: Trace[], visitorId: string): string {
         <p class="colophon"><a href="/readme/">what this is for</a></p>
       </footer>
     </div>
+    <p class="link-state" role="status" aria-live="polite"></p>
+    <p class="visually-hidden wall-live" aria-live="polite"></p>
+    <script type="application/json" id="wall-data">${data}</script>
     <script type="module" src="/static/js/main.js"></script>
   `;
   return shell("六如 — a wall for passing things", "wall-page", body);

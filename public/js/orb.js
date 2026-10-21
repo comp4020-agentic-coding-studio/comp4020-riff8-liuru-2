@@ -23,7 +23,7 @@ const BURST = 0.9; // seconds an elemental reaction lasts when a light is touche
 const FEATURE_EVERY = 1.1; // seconds each thought is held up in the glass while it cycles
 const FEATURE_FADE = 0.35;
 
-export function createOrb(stage, { traces, onCount, onTouch }) {
+export function createOrb(stage, { traces, onCount, onTouch, onShow, onHold }) {
   const el = stage.querySelector(".orb");
   const canvas = el.querySelector("canvas");
   const ctx = canvas.getContext("2d");
@@ -47,6 +47,9 @@ export function createOrb(stage, { traces, onCount, onTouch }) {
   let streaks = [];
   let hovered = null;
   let pinned = null;
+  // while a reply is being written under a thought, the panel keeps that thought whatever else happens
+  let locked = null;
+  let shownMo = null;
   let keyIndex = -1;
   let hideTimer = 0;
   let pulse = 0;
@@ -63,6 +66,15 @@ export function createOrb(stage, { traces, onCount, onTouch }) {
   let order = [];
   let orderPos = 0;
   let featureBox = null;
+
+  /** Whether the glass is drifting or held, and on which thought, for the controls beneath it. */
+  const reportHold = () => onHold?.({ cycling, pinned: pinned?.trace ?? null });
+  function setPinned(mo) {
+    if (locked && mo !== locked) return;
+    if (mo === pinned) return;
+    pinned = mo;
+    reportHold();
+  }
 
   const makeMote = (trace, i, n) => {
     // spread evenly through the ball (a Fibonacci sphere), then jitter so it reads as weather, not a lattice
@@ -763,8 +775,15 @@ export function createOrb(stage, { traces, onCount, onTouch }) {
   // ---------------------------------------------------------------- reveal
 
   function show(mo, { announceIt = false } = {}) {
+    if (locked && mo !== locked) return;
     clearTimeout(hideTimer);
     const tr = mo.trace;
+    const say = () => {
+      if (announceIt) announce.textContent = `${tr.mine ? "Yours. " : ""}${mo.m.label}, ${relativeTime(tr.createdAt)}: ${tr.text}`;
+    };
+    // already on the panel: leave it be, so a reply being read or written there isn't torn down
+    if (shownMo === mo && reveal.classList.contains("shown")) return say();
+    shownMo = mo;
     const m = mo.m;
     reveal.style.setProperty("--r-a", rgba(m.a));
     reveal.replaceChildren();
@@ -796,19 +815,22 @@ export function createOrb(stage, { traces, onCount, onTouch }) {
       mine.textContent = mo.fresh > 0 ? "yours — just let go" : "yours";
       reveal.append(mine);
     }
+    onShow?.(reveal, tr);
     reveal.classList.add("shown");
-    if (announceIt) {
-      announce.textContent = `${tr.mine ? "Yours. " : ""}${m.label}, ${relativeTime(tr.createdAt)}: ${tr.text}`;
-    }
+    say();
   }
 
   function hideSoon() {
     clearTimeout(hideTimer);
     hideTimer = setTimeout(() => {
-      if (pinned || hovered) return;
+      // a reader whose focus is inside the panel (a reply, a thread) keeps it
+      if (pinned || hovered || locked || reveal.contains(document.activeElement)) return;
       reveal.classList.remove("shown");
       hideTimer = setTimeout(() => {
-        if (!reveal.classList.contains("shown")) reveal.replaceChildren();
+        if (!reveal.classList.contains("shown")) {
+          reveal.replaceChildren();
+          shownMo = null;
+        }
       }, 500);
     }, 1400);
   }
@@ -921,12 +943,12 @@ export function createOrb(stage, { traces, onCount, onTouch }) {
     const onWords = featureBox && featured && x > featureBox.x0 && x < featureBox.x1 && y > featureBox.y0 && y < featureBox.y1;
     const mo = hit(x, y, e.pointerType !== "mouse") ?? (onWords ? featured : null);
     if (mo) {
-      pinned = mo;
+      setPinned(mo);
       keyIndex = motes.indexOf(mo);
       touch(mo);
       show(mo, { announceIt: true });
     } else {
-      pinned = null;
+      setPinned(null);
       if (!hovered) hideSoon();
       ripple(x, y, NEUTRAL.a);
       const near = motes.filter((m) => Math.hypot(m.sx - x, m.sy - y) < R * 0.5);
@@ -957,13 +979,15 @@ export function createOrb(stage, { traces, onCount, onTouch }) {
       e.preventDefault();
       keyIndex = stepFrom(0, -1);
     } else if (e.key === "Escape") {
-      pinned = null;
+      if (locked) return;
+      setPinned(null);
       hideSoon();
       announce.textContent = "";
       return;
     } else return;
     audio.unlock();
-    pinned = motes[keyIndex];
+    if (locked) return;
+    setPinned(motes[keyIndex]);
     face(pinned);
     touch(pinned);
     show(pinned, { announceIt: true });
@@ -1005,7 +1029,8 @@ export function createOrb(stage, { traces, onCount, onTouch }) {
 
   /** Holds a thought still and reads it out: the manual way through the cycle. */
   function pinAndShow(mo) {
-    pinned = mo;
+    if (locked && mo !== locked) return;
+    setPinned(mo);
     keyIndex = motes.indexOf(mo);
     face(mo);
     touch(mo);
@@ -1017,11 +1042,12 @@ export function createOrb(stage, { traces, onCount, onTouch }) {
     setCycling(on, { pin = true } = {}) {
       cycling = on;
       if (!on && pin && featured && shown(featured) && !pinned) pinAndShow(featured);
-      if (on && pinned) {
-        pinned = null;
+      if (on && pinned && !locked) {
+        setPinned(null);
         hideSoon();
       }
       featureClock = 0;
+      reportHold();
     },
     get cycling() {
       return cycling;
@@ -1042,7 +1068,7 @@ export function createOrb(stage, { traces, onCount, onTouch }) {
     /** Shows only one kind of thought (or all, given null); the rest dim to points. */
     only(kind) {
       only = kind;
-      if (pinned && !shown(pinned)) pinned = null;
+      if (pinned && !shown(pinned) && !locked) setPinned(null);
       if (hovered && !shown(hovered)) hovered = null;
       if (!pinned) hideSoon();
       const matching = motes.filter(shown);
@@ -1052,6 +1078,22 @@ export function createOrb(stage, { traces, onCount, onTouch }) {
         ? `Showing only ${META[kind].name.toLowerCase()}: ${matching.length === 1 ? "one thought" : `${matching.length} thoughts`}.`
         : `Showing every thought: ${motes.length}.`;
       return matching.length;
+    },
+    /** Holds the drift and reads out this thought, turning the glass until its light faces the visitor. */
+    select(id) {
+      const mo = motes.find((m) => m.trace.id === id);
+      if (!mo || (locked && mo !== locked)) return false;
+      if (!shown(mo)) return false;
+      cycling = false;
+      feature(mo);
+      pinAndShow(mo);
+      reportHold();
+      return true;
+    },
+    /** Keeps the panel on this thought (by id) while a reply is written under it; null lets go. */
+    lock(id) {
+      locked = id == null ? null : (motes.find((m) => m.trace.id === id) ?? null);
+      if (locked && pinned !== locked) setPinned(locked);
     },
     /** Where, in viewport coordinates, a released thought should fly to. */
     centre() {
@@ -1082,8 +1124,9 @@ export function createOrb(stage, { traces, onCount, onTouch }) {
       pulseRgb = mo.m.a;
       ripple(cx, cy, mo.m.a);
       audio.arrive(trace.kind);
-      pinned = mo;
       keyIndex = 0;
+      if (locked) return;
+      setPinned(mo);
       hovered = null;
       rot.vyaw = 0;
       // let the ball settle before the light is read out
