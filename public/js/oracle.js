@@ -56,14 +56,20 @@ const STATUS = {
   hidden: () => "Resting while this tab is out of sight.",
   elsewhere: () => "Imagining in another tab of yours; its thoughts show here too.",
   retrying: () => "That thought didn't come. Trying again shortly.",
+  stopped: () => "Stopped, and its memory let go. Its last thoughts stay in the glass; waking it again picks up whatever was already downloaded.",
+  failed: (_c, _p, why) => `It stopped (${why}). You can try again; the guestbook works as ever.`,
   unavailable: (_c, _p, why) => `It can't run in this browser (${why}). The guestbook works as ever.`,
 };
+
+// the phases in which the model is loaded or loading in this tab, and so can be stopped
+const STOPPABLE = ["loading", "thinking", "resting", "paused", "waiting", "retrying", "hidden"];
 
 export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
   const status = root.querySelector(".oracle-status");
   const live = root.querySelector(".oracle-phase");
   const toggle = root.querySelector(".oracle-toggle");
   const wakeButton = root.querySelector(".oracle-wake");
+  const stopButton = root.querySelector(".oracle-stop");
   const list = root.querySelector(".oracle-list");
   const summary = root.querySelector(".oracle-summary");
   const engine = root.querySelector(".oracle-engine");
@@ -78,6 +84,7 @@ export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
   let announced = "";
   let started = false;
   let loop = null;
+  let wakeHeld = false; // the wake button was pressed and hid itself before its replacement appeared
 
   // ---------------------------------------------------------------- memory, kept in this browser
 
@@ -142,10 +149,12 @@ export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
     status.textContent = STATUS[name](candidate ?? candidates[0], progress, why);
     orb.setState(name === "hidden" ? "paused" : name, { progress });
     root.dataset.phase = name;
-    // tell a screen reader when the phase really changes, never on every percentage, thought, or turn of the loop
-    if (name !== announced && !["thinking", "resting", "loading"].includes(name)) {
+    // tell a screen reader when the phase really changes, never on every percentage, thought, or turn of the loop;
+    // the download is announced once as it starts, and the end of it once as the model first runs
+    const awake = phase === "loading" && (name === "thinking" || name === "resting");
+    if (awake || (name !== announced && !["thinking", "resting"].includes(name) && !(name === "loading" && phase === "loading"))) {
       // cleared first, so a message that comes back word for word is still read again
-      const message = status.textContent;
+      const message = awake ? `Awake: ${CONFIG.model.name} is running in this browser, imagining.` : status.textContent;
       live.textContent = "";
       requestAnimationFrame(() => (live.textContent = message));
       announced = name;
@@ -154,8 +163,20 @@ export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
     // (an empty wall's turns never get here, so its "waiting" is said once)
     if (name === "resting") announced = "";
     phase = name;
+    // whichever of wake and stop had focus hands it to the other as they swap places
+    const focused = [wakeButton, stopButton].includes(document.activeElement) || (wakeHeld && document.activeElement === document.body);
     toggle.hidden = !["thinking", "resting", "paused", "waiting", "retrying", "hidden"].includes(name);
-    wakeButton.hidden = name !== "asleep";
+    wakeButton.hidden = !["asleep", "stopped", "failed"].includes(name);
+    wakeButton.querySelector("span").textContent = name === "failed" ? "try again" : name === "stopped" ? "wake it again" : "wake it";
+    stopButton.hidden = !STOPPABLE.includes(name) || !(started || releaseLock);
+    stopButton.querySelector("span").textContent = name === "loading" ? "cancel the download" : "stop it";
+    if (focused) {
+      const next = [stopButton, wakeButton, toggle].find((b) => !b.hidden);
+      if (next) {
+        next.focus();
+        wakeHeld = false;
+      }
+    }
   }
 
   // ---------------------------------------------------------------- the worker
@@ -313,8 +334,10 @@ export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
     started = true;
     const mine = ++epoch;
     candidates = await probe();
+    if (mine !== epoch) return;
     if (!candidates.length) {
-      giveUp("no WebGPU, and too little memory for the CPU version");
+      release();
+      setPhase("unavailable", { why: "no WebGPU, and too little memory for the CPU version" });
       return;
     }
     const ok = await loadModel(0, mine);
@@ -382,28 +405,39 @@ export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
       });
   }
 
-  /** Stops for good in this tab, says why, and lets another tab of this browser try. */
-  function giveUp(why) {
-    epoch++;
-    loop?.stop();
-    loop = null;
-    kill();
-    setPhase("unavailable", { why });
-    releaseLock?.();
-    releaseLock = null;
-  }
-
-  function handOver() {
-    if (!releaseLock) return;
+  /** Lets the model go in this tab, freeing its worker and the lock, so another tab (or a retry) can have it. */
+  function release() {
     epoch++;
     loop?.stop();
     loop = null;
     kill();
     candidate = null;
     started = false;
+    queued?.abort();
+    queued = null;
     const done = releaseLock;
     releaseLock = null;
-    done();
+    done?.();
+  }
+
+  /** Stops in this tab and says why; it can be tried again by hand. */
+  function giveUp(why) {
+    release();
+    woken = false;
+    setPhase("failed", { why });
+  }
+
+  /** The visitor's own stop: during the download, or once it runs. */
+  function stop() {
+    release();
+    woken = false;
+    sessionStorage.removeItem("liuru.oracle.woken");
+    setPhase("stopped");
+  }
+
+  function handOver() {
+    if (!releaseLock) return;
+    release();
     setPhase("hidden");
   }
 
@@ -440,7 +474,12 @@ export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
 
   wakeButton.addEventListener("click", () => {
     sessionStorage.setItem("liuru.oracle.woken", "1");
+    wakeHeld = document.activeElement === wakeButton;
     claim();
+  });
+  stopButton.addEventListener("click", () => {
+    stop();
+    wakeButton.focus();
   });
 
   // ---------------------------------------------------------------- when to wake
@@ -460,9 +499,10 @@ export function createOracle({ root, orb, getTraces, onInspire, onThought }) {
     } catch {
       cached = false;
     }
-    const small = matchMedia("(pointer: coarse)").matches || navigator.connection?.saveData;
-    // a phone, or a connection asking to save data, is asked before a few hundred megabytes arrive
-    const auto = cached || sessionStorage.getItem("liuru.oracle.woken") === "1" || !small;
+    // Nothing is fetched until the visitor asks: a first visit waits for "wake it", on any device.
+    // Weights already in this browser's cache, or a wake earlier in this tab's session, cost no
+    // download, so those wake by themselves once the glass is in view.
+    const auto = cached || sessionStorage.getItem("liuru.oracle.woken") === "1";
     if (!auto) return;
     // the model wakes when the twin orbs come into view, not while the visitor is still writing
     const seen = new IntersectionObserver(

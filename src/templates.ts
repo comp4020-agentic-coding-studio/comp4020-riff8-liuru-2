@@ -309,6 +309,7 @@ export function renderWall(traces: Trace[], replies: Reply[], cursor: string, vi
                 <p class="visually-hidden oracle-phase" aria-live="polite"></p>
                 <div class="oracle-controls">
                   <button type="button" class="oracle-wake" hidden><span>wake it</span></button>
+                  <button type="button" class="oracle-stop" hidden><span>stop it</span></button>
                   <button type="button" class="oracle-toggle" aria-pressed="false" hidden><span>pause its imagining</span></button>
                 </div>
                 <div class="reveal oracle-reveal"></div>

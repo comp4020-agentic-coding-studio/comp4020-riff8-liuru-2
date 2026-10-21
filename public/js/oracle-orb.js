@@ -242,18 +242,20 @@ export function createOracleOrb(stage, { onTouch, describe }) {
 
   function drawState() {
     const name = state.name;
-    if (current && !["asleep", "loading", "unavailable"].includes(name)) return;
+    if (current && !["asleep", "loading", "unavailable", "failed"].includes(name)) return;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     const size = clamp(R * 0.068, 14, 22);
     ctx.font = font(size);
     const breath = reducedMotion.matches ? 0.75 : 0.6 + 0.25 * Math.sin(t * 1.2);
-    ctx.fillStyle = `rgba(236,232,250,${name === "unavailable" ? 0.6 : breath})`;
+    ctx.fillStyle = `rgba(236,232,250,${name === "unavailable" || name === "failed" ? 0.6 : breath})`;
     const words = {
       asleep: "asleep",
       loading: `waking · ${Math.round(state.progress * 100)}%`,
       waiting: "waiting for someone to leave a thought",
       unavailable: "it can't run here",
+      failed: "it stopped",
+      stopped: "stopped",
       elsewhere: "imagining in another tab",
       paused: "paused",
       thinking: "imagining…",
@@ -528,7 +530,7 @@ export function createOracleOrb(stage, { onTouch, describe }) {
     },
     setState(name, { progress = 0 } = {}) {
       state = { name, progress };
-      el.classList.toggle("is-asleep", name === "asleep" || name === "unavailable");
+      el.classList.toggle("is-asleep", ["asleep", "unavailable", "failed", "stopped"].includes(name));
     },
     /** Where, in viewport coordinates, the glass's middle is. */
     centre() {
